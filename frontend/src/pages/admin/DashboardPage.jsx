@@ -160,7 +160,7 @@ const DashboardPage = () => {
                   <div key={i} className="space-y-2">
                     <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
                       <span>{p.productName}</span>
-                      <span>{pct}%</span>
+                      <span className="text-on-surface">{p.totalQuantity.toFixed(1)} kg</span>
                     </div>
                     <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
                       <div className={`${colors[i]} h-full rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />

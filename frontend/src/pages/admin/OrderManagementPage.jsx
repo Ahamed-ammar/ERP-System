@@ -99,6 +99,18 @@ const OrderManagementPage = () => {
     ? `${filters.startDate} – ${filters.endDate}`
     : filters.startDate ? `From ${filters.startDate}` : 'All Time';
 
+  const dayCount = (() => {
+    if (filters.startDate && filters.endDate) {
+      return Math.max(1, Math.round((new Date(filters.endDate) - new Date(filters.startDate)) / (1000 * 60 * 60 * 24)) + 1);
+    }
+    // No date range — calculate from oldest order to today
+    if (orders.length > 0) {
+      const oldest = orders.reduce((min, o) => new Date(o.createdAt) < new Date(min) ? o.createdAt : min, orders[0].createdAt);
+      return Math.max(1, Math.round((new Date() - new Date(oldest)) / (1000 * 60 * 60 * 24)) + 1);
+    }
+    return null;
+  })();
+
   const filterTabs = ['All', 'Pending', 'InProgress', 'Ready', 'Delivered', 'Cancelled'];
   const filteredByTab = activeFilter === 'All' ? orders : orders.filter(o => o.status === activeFilter);
   const displayed = filteredByTab.slice(0, visibleCount);
@@ -109,6 +121,7 @@ const OrderManagementPage = () => {
     { label: 'Pending', value: pending, icon: 'pending_actions', iconBg: 'bg-secondary-fixed', iconColor: 'text-secondary', badge: 'Active', badgeStyle: 'text-on-surface-variant' },
     { label: 'Revenue', value: `₹${revenue.toFixed(0)}`, icon: 'payments', iconBg: 'bg-tertiary-container', iconColor: 'text-tertiary', badge: dateRangeLabel, badgeStyle: 'text-primary bg-primary-container' },
     { label: 'Cancelled', value: cancelled, icon: 'cancel', iconBg: 'bg-error-container/20', iconColor: 'text-error', badge: 'Total', badgeStyle: 'text-error' },
+    { label: 'Data Period', value: dayCount ? `${dayCount} Days` : '—', icon: 'calendar_today', iconBg: 'bg-surface-container-high', iconColor: 'text-on-surface', badge: filters.startDate ? 'Range' : 'Since Start', badgeStyle: 'text-on-surface-variant' },
   ];
 
   return (
@@ -163,7 +176,7 @@ const OrderManagementPage = () => {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
           {stats.map(s => (
             <div key={s.label} className="bg-surface-container-lowest p-6 rounded-xl shadow-card flex flex-col justify-between">
               <div className="flex justify-between items-start mb-4">

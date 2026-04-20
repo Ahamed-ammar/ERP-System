@@ -1,433 +1,306 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { toast } from 'react-toastify';
 import { getAllProducts, createProduct, updateProduct, toggleProductStatus } from '../../api/productApi';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
-import Loader from '../../components/common/Loader';
 import Modal from '../../components/common/Modal';
-import ImageUpload from '../../components/common/ImageUpload';
+
+const PRODUCT_IMAGES = {
+  wheat: '/images/wheat.jpg', rice: '/images/rice.jpg',
+  turmeric: '/images/turmeric-powder.jpg', chili: '/images/chilli.jpg',
+  chilli: '/images/chilli.jpg', coriander: '/images/Coriander.jpg',
+  'garam masala': '/images/garam masala.jpg', ragi: '/images/ragi.jpg',
+};
+
+const getProductImage = (name) => {
+  if (!name) return null;
+  const key = Object.keys(PRODUCT_IMAGES).find(k => name.toLowerCase().includes(k));
+  return key ? PRODUCT_IMAGES[key] : null;
+};
 
 const ProductManagementPage = () => {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [formData, setFormData] = useState({
-    name: '',
-    rawMaterialPricePerKg: '',
-    grindingChargePerKg: '',
-    description: ''
-  });
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [formData, setFormData] = useState({ name: '', rawMaterialPricePerKg: '', grindingChargePerKg: '', description: '' });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  const [activeTab, setActiveTab] = useState('All');
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  useEffect(() => { fetchProducts(); }, []);
 
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const response = await getAllProducts();
-      setProducts(response.data.products || []);
-    } catch (error) {
-      toast.error('Failed to fetch products');
-      console.error('Error fetching products:', error);
-    } finally {
-      setLoading(false);
-    }
+      const res = await getAllProducts();
+      setProducts(res.data.products || []);
+    } catch { toast.error('Failed to fetch products'); }
+    finally { setLoading(false); }
   };
 
-  const validateForm = () => {
-    const errors = {};
-    
-    if (!formData.name.trim()) {
-      errors.name = 'Product name is required';
-    }
-    
-    if (!formData.rawMaterialPricePerKg || formData.rawMaterialPricePerKg < 0) {
-      errors.rawMaterialPricePerKg = 'Raw material price must be a non-negative number';
-    }
-    
-    if (!formData.grindingChargePerKg || formData.grindingChargePerKg < 0) {
-      errors.grindingChargePerKg = 'Grinding charge must be a non-negative number';
-    }
-    
-    setFormErrors(errors);
-    return Object.keys(errors).length === 0;
-  };
-
-  const handleOpenModal = (product = null) => {
-    if (product) {
-      setEditingProduct(product);
-      setFormData({
-        name: product.name,
-        rawMaterialPricePerKg: product.rawMaterialPricePerKg,
-        grindingChargePerKg: product.grindingChargePerKg,
-        description: product.description || ''
-      });
-    } else {
-      setEditingProduct(null);
-      setFormData({
-        name: '',
-        rawMaterialPricePerKg: '',
-        grindingChargePerKg: '',
-        description: ''
-      });
-    }
-    setSelectedImage(null);
+  const openModal = (product = null) => {
+    setEditingProduct(product);
+    setFormData(product ? {
+      name: product.name, rawMaterialPricePerKg: product.rawMaterialPricePerKg,
+      grindingChargePerKg: product.grindingChargePerKg, description: product.description || ''
+    } : { name: '', rawMaterialPricePerKg: '', grindingChargePerKg: '', description: '' });
     setFormErrors({});
     setIsModalOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingProduct(null);
-    setFormData({
-      name: '',
-      rawMaterialPricePerKg: '',
-      grindingChargePerKg: '',
-      description: ''
-    });
-    setSelectedImage(null);
-    setFormErrors({});
-  };
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-    // Clear error for this field
-    if (formErrors[name]) {
-      setFormErrors(prev => ({
-        ...prev,
-        [name]: ''
-      }));
-    }
-  };
-
   const handleSubmit = async () => {
-    if (!validateForm()) {
-      return;
-    }
+    const errors = {};
+    if (!formData.name.trim()) errors.name = 'Required';
+    if (!formData.rawMaterialPricePerKg || formData.rawMaterialPricePerKg < 0) errors.rawMaterialPricePerKg = 'Required';
+    if (!formData.grindingChargePerKg || formData.grindingChargePerKg < 0) errors.grindingChargePerKg = 'Required';
+    if (Object.keys(errors).length) { setFormErrors(errors); return; }
 
     try {
       setSubmitting(true);
-      
-      // Create FormData for file upload
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name.trim());
-      formDataToSend.append('rawMaterialPricePerKg', parseFloat(formData.rawMaterialPricePerKg));
-      formDataToSend.append('grindingChargePerKg', parseFloat(formData.grindingChargePerKg));
-      formDataToSend.append('description', formData.description.trim());
-      
-      // Add image if selected
-      if (selectedImage) {
-        formDataToSend.append('image', selectedImage);
-      }
-
+      const payload = new FormData();
+      payload.append('name', formData.name.trim());
+      payload.append('rawMaterialPricePerKg', parseFloat(formData.rawMaterialPricePerKg));
+      payload.append('grindingChargePerKg', parseFloat(formData.grindingChargePerKg));
+      payload.append('description', formData.description.trim());
       if (editingProduct) {
-        await updateProduct(editingProduct._id, formDataToSend);
-        toast.success('Product updated successfully');
+        await updateProduct(editingProduct._id, payload);
+        toast.success('Product updated');
       } else {
-        await createProduct(formDataToSend);
-        toast.success('Product created successfully');
+        await createProduct(payload);
+        toast.success('Product created');
       }
-
-      handleCloseModal();
+      setIsModalOpen(false);
       fetchProducts();
-    } catch (error) {
-      toast.error(error.response?.data?.error?.message || 'Failed to save product');
-      console.error('Error saving product:', error);
-    } finally {
-      setSubmitting(false);
-    }
+    } catch (err) {
+      toast.error(err.response?.data?.error?.message || 'Failed to save product');
+    } finally { setSubmitting(false); }
   };
 
-  const handleToggleStatus = async (productId, currentStatus) => {
+  const handleToggle = async (id, isActive) => {
     try {
-      await toggleProductStatus(productId);
-      toast.success(`Product ${currentStatus ? 'disabled' : 'enabled'} successfully`);
+      await toggleProductStatus(id);
+      toast.success(`Product ${isActive ? 'disabled' : 'enabled'}`);
       fetchProducts();
-    } catch (error) {
-      toast.error('Failed to toggle product status');
-      console.error('Error toggling product status:', error);
-    }
+    } catch { toast.error('Failed to toggle status'); }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader size="large" text="Loading products..." />
-      </div>
-    );
-  }
+  const active = products.filter(p => p.isActive).length;
+  const inactive = products.filter(p => !p.isActive).length;
+  const avgMaterial = products.length ? (products.reduce((s, p) => s + p.rawMaterialPricePerKg, 0) / products.length).toFixed(0) : 0;
+
+  const tabs = [
+    { key: 'All', label: `All Products (${products.length})` },
+    { key: 'Active', label: `Active (${active})` },
+    { key: 'Inactive', label: `Inactive (${inactive})` },
+  ];
+
+  const displayed = activeTab === 'All' ? products
+    : activeTab === 'Active' ? products.filter(p => p.isActive)
+    : products.filter(p => !p.isActive);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Product Management</h1>
-          <p className="mt-1 text-sm text-gray-600">Manage products and pricing</p>
-        </div>
+    <div className="md:ml-64 min-h-screen bg-background pt-16 md:pt-0">
+      <div className="pt-8 px-6 md:px-10 pb-12">
 
-      {/* Add Product Button */}
-      <div className="mb-6">
-        <Button onClick={() => handleOpenModal()}>
-          Add New Product
-        </Button>
-      </div>
+        {/* Header */}
+        <section className="flex flex-col md:flex-row justify-between items-start md:items-end mb-10 gap-4">
+          <div>
+            <nav className="flex items-center gap-2 text-xs font-bold text-on-surface-variant/60 uppercase tracking-widest mb-2">
+              <span>Admin</span>
+              <span className="material-symbols-outlined text-xs">chevron_right</span>
+              <span className="text-primary">Products</span>
+            </nav>
+            <h2 className="font-headline text-4xl font-extrabold text-on-surface tracking-tight">Menu Management</h2>
+            <p className="text-on-surface-variant mt-2 max-w-lg">Manage your product catalog, adjust pricing, and toggle availability.</p>
+          </div>
+          <button
+            onClick={() => openModal()}
+            className="sage-gradient text-on-primary px-8 py-4 rounded-full font-headline font-bold flex items-center gap-3 shadow-sage hover:shadow-sage-lg hover:scale-[1.02] transition-all active:scale-95"
+          >
+            <span className="material-symbols-outlined">add_circle</span>
+            Add New Product
+          </button>
+        </section>
 
-      {/* Products List */}
-      {products.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-gray-500 text-lg">No products found</p>
-          <p className="text-gray-400 mt-2">Click "Add New Product" to create your first product</p>
-        </div>
-      ) : (
-        <>
-          {/* Desktop Table View */}
-          <div className="hidden md:block bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Raw Material Price
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Grinding Charge
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+        {/* Product Table */}
+        <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-card">
+          {/* Table Header */}
+          <div className="p-6 border-b border-surface-container-low flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-surface-container-low/30">
+            <div className="flex flex-wrap gap-2">
+              {tabs.map(t => (
+                <button key={t.key} onClick={() => setActiveTab(t.key)}
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${activeTab === t.key ? 'bg-primary-container text-on-primary-container' : 'text-on-surface-variant hover:bg-surface-container-high'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="py-20 flex justify-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary"></div>
+            </div>
+          ) : displayed.length === 0 ? (
+            <div className="py-20 text-center">
+              <span className="material-symbols-outlined text-5xl text-on-surface-variant mb-3 block">inventory_2</span>
+              <p className="text-on-surface-variant font-medium">No products found</p>
+              <button onClick={() => openModal()} className="mt-4 text-primary font-bold hover:underline">Add your first product</button>
+            </div>
+          ) : (
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="text-[11px] uppercase tracking-[0.15em] text-on-surface-variant font-extrabold border-b border-surface-container-low">
+                  <th className="py-5 px-8">Product Details</th>
+                  <th className="py-5 px-4">Raw Material Price</th>
+                  <th className="py-5 px-4">Grinding Charge</th>
+                  <th className="py-5 px-4">Status</th>
+                  <th className="py-5 px-8 text-right">Actions</th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {products.map((product) => (
-                  <tr key={product._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <div className="flex-shrink-0 h-16 w-16">
-                          {product.imageUrl ? (
-                            <img
-                              className="h-16 w-16 rounded-lg object-cover"
-                              src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${product.imageUrl}`}
-                              alt={product.name}
-                              onError={(e) => {
-                                e.target.src = '/placeholder-product.svg';
-                              }}
-                            />
-                          ) : (
-                            <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                              <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                            </div>
-                          )}
+              <tbody className="divide-y divide-surface-container-low">
+                {displayed.map(product => {
+                  const img = getProductImage(product.name);
+                  return (
+                    <tr key={product._id} className={`group hover:bg-surface-container-low/50 transition-colors ${!product.isActive ? 'opacity-60' : ''}`}>
+                      <td className="py-6 px-8">
+                        <div className="flex items-center gap-4">
+                          <div className={`w-16 h-16 rounded-xl overflow-hidden bg-surface-container flex-shrink-0 ${!product.isActive ? 'grayscale' : ''}`}>
+                            {img ? (
+                              <img src={img} alt={product.name} className="w-full h-full object-cover" onError={e => { e.target.style.display = 'none'; }} />
+                            ) : (
+                              <div className="w-full h-full bg-primary-container flex items-center justify-center">
+                                <span className="material-symbols-outlined text-primary text-2xl">grain</span>
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <h4 className="font-bold text-on-surface text-base">{product.name}</h4>
+                            {product.description && (
+                              <p className="text-xs text-on-surface-variant line-clamp-1 mt-0.5">{product.description}</p>
+                            )}
+                          </div>
                         </div>
-                        <div className="ml-4">
-                          <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                          {product.description && (
-                            <div className="text-sm text-gray-500">{product.description}</div>
-                          )}
+                      </td>
+                      <td className="py-6 px-4">
+                        <span className="font-bold text-on-surface">₹{product.rawMaterialPricePerKg}</span>
+                        <span className="text-[10px] text-on-surface-variant block uppercase font-bold mt-0.5">Per KG</span>
+                      </td>
+                      <td className="py-6 px-4">
+                        <span className="font-bold text-primary">₹{product.grindingChargePerKg}</span>
+                        <span className="text-[10px] text-on-surface-variant block uppercase font-bold mt-0.5">Per KG</span>
+                      </td>
+                      <td className="py-6 px-4">
+                        {product.isActive ? (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-primary-container text-on-primary-container rounded-full text-xs font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse"></span>
+                            Active
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full text-xs font-bold">
+                            <span className="w-1.5 h-1.5 rounded-full bg-outline"></span>
+                            Inactive
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-6 px-8 text-right">
+                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button onClick={() => openModal(product)}
+                            className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-container/20 rounded-xl transition-colors" title="Edit">
+                            <span className="material-symbols-outlined">edit_note</span>
+                          </button>
+                          <button onClick={() => handleToggle(product._id, product.isActive)}
+                            className={`p-2 rounded-xl transition-colors ${product.isActive ? 'text-on-surface-variant hover:text-error hover:bg-error-container/10' : 'text-primary hover:bg-primary-container/20'}`}
+                            title={product.isActive ? 'Disable' : 'Enable'}>
+                            <span className="material-symbols-outlined">{product.isActive ? 'block' : 'check_circle'}</span>
+                          </button>
                         </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ₹{product.rawMaterialPricePerKg}/kg
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      ₹{product.grindingChargePerKg}/kg
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        product.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => handleOpenModal(product)}
-                        className="text-blue-600 hover:text-blue-900 mr-4"
-                      >
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(product._id, product.isActive)}
-                        className={`${
-                          product.isActive 
-                            ? 'text-red-600 hover:text-red-900' 
-                            : 'text-green-600 hover:text-green-900'
-                        }`}
-                      >
-                        {product.isActive ? 'Disable' : 'Enable'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
-          </div>
+          )}
 
-          {/* Mobile Card View */}
-          <div className="md:hidden space-y-4">
-            {products.map((product) => (
-              <div key={product._id} className="bg-white rounded-lg shadow p-4">
-                <div className="flex items-start space-x-4 mb-3">
-                  <div className="flex-shrink-0">
-                    {product.imageUrl ? (
-                      <img
-                        className="h-16 w-16 rounded-lg object-cover"
-                        src={`${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${product.imageUrl}`}
-                        alt={product.name}
-                        onError={(e) => {
-                          e.target.src = '/placeholder-product.svg';
-                        }}
-                      />
-                    ) : (
-                      <div className="h-16 w-16 rounded-lg bg-gray-200 flex items-center justify-center">
-                        <svg className="h-8 w-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        </svg>
-                      </div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <div className="flex-1">
-                        <h3 className="text-lg font-semibold text-gray-900">{product.name}</h3>
-                        {product.description && (
-                          <p className="text-sm text-gray-500 mt-1">{product.description}</p>
-                        )}
-                      </div>
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                        product.isActive 
-                          ? 'bg-green-100 text-green-800' 
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {product.isActive ? 'Active' : 'Inactive'}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="space-y-2 mb-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Raw Material Price:</span>
-                    <span className="font-medium text-gray-900">₹{product.rawMaterialPricePerKg}/kg</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Grinding Charge:</span>
-                    <span className="font-medium text-gray-900">₹{product.grindingChargePerKg}/kg</span>
-                  </div>
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => handleOpenModal(product)}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => handleToggleStatus(product._id, product.isActive)}
-                    className={`flex-1 px-4 py-2 rounded-lg transition-colors ${
-                      product.isActive
-                        ? 'bg-red-600 text-white hover:bg-red-700'
-                        : 'bg-green-600 text-white hover:bg-green-700'
-                    }`}
-                  >
-                    {product.isActive ? 'Disable' : 'Enable'}
-                  </button>
-                </div>
-              </div>
-            ))}
+          {/* Footer */}
+          <div className="p-6 border-t border-surface-container-low flex justify-between items-center text-sm font-medium text-on-surface-variant">
+            <span>Showing {displayed.length} of {products.length} products</span>
           </div>
-        </>
-      )}
+        </div>
+
+        {/* Info Cards */}
+        <section className="mt-10 grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-primary-container/30 p-6 rounded-xl flex items-center gap-5">
+            <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+              <span className="material-symbols-outlined text-3xl">trending_up</span>
+            </div>
+            <div>
+              <h5 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">Avg. Material Cost</h5>
+              <p className="font-headline text-2xl font-extrabold text-on-surface">₹{avgMaterial} <span className="text-xs font-bold text-on-surface-variant">/ KG</span></p>
+            </div>
+          </div>
+          <div className="bg-secondary-container/30 p-6 rounded-xl flex items-center gap-5">
+            <div className="w-14 h-14 rounded-full bg-secondary/10 flex items-center justify-center text-secondary">
+              <span className="material-symbols-outlined text-3xl">precision_manufacturing</span>
+            </div>
+            <div>
+              <h5 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">Active Products</h5>
+              <p className="font-headline text-2xl font-extrabold text-on-surface">{active} <span className="text-[10px] font-bold">ITEMS</span></p>
+            </div>
+          </div>
+          <div className="bg-surface-container-lowest p-6 rounded-xl flex items-center gap-5 shadow-card border border-surface-container-low">
+            <div className="w-14 h-14 rounded-full bg-on-surface/5 flex items-center justify-center text-on-surface">
+              <span className="material-symbols-outlined text-3xl">inventory_2</span>
+            </div>
+            <div>
+              <h5 className="text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-1">Inactive</h5>
+              <p className="font-headline text-2xl font-extrabold text-on-surface">{inactive} <span className="text-xs font-bold text-on-surface-variant/40">ITEMS</span></p>
+            </div>
+          </div>
+        </section>
+      </div>
 
       {/* Product Form Modal */}
-      <Modal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        title={editingProduct ? 'Edit Product' : 'Add New Product'}
-        onConfirm={handleSubmit}
-        confirmText={submitting ? 'Saving...' : 'Save'}
-        cancelText="Cancel"
-      >
+      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}
+        title={editingProduct ? 'Edit Product' : 'Add New Product'}>
         <div className="space-y-4">
-          <ImageUpload
-            label="Product Image"
-            currentImage={editingProduct?.imageUrl ? `${import.meta.env.VITE_API_URL || 'http://localhost:5000'}${editingProduct.imageUrl}` : null}
-            onImageChange={setSelectedImage}
-            error={formErrors.image}
-          />
-
-          <Input
-            label="Product Name"
-            name="name"
-            value={formData.name}
-            onChange={handleInputChange}
-            error={formErrors.name}
-            required
-            placeholder="e.g., Wheat, Rice, Turmeric"
-          />
-
-          <Input
-            label="Raw Material Price (per kg)"
-            name="rawMaterialPricePerKg"
-            type="number"
-            value={formData.rawMaterialPricePerKg}
-            onChange={handleInputChange}
-            error={formErrors.rawMaterialPricePerKg}
-            required
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-
-          <Input
-            label="Grinding Charge (per kg)"
-            name="grindingChargePerKg"
-            type="number"
-            value={formData.grindingChargePerKg}
-            onChange={handleInputChange}
-            error={formErrors.grindingChargePerKg}
-            required
-            placeholder="0.00"
-            min="0"
-            step="0.01"
-          />
-
-          <div className="w-full">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Description
-            </label>
-            <textarea
-              name="description"
-              value={formData.description}
-              onChange={handleInputChange}
-              placeholder="Optional product description"
-              rows="3"
-              className="w-full px-4 py-3 text-base border border-gray-300 rounded-lg focus:border-green-500 focus:ring-2 focus:ring-green-200 outline-none transition-colors duration-200"
+          {[
+            { label: 'Product Name', name: 'name', type: 'text', placeholder: 'e.g., Wheat, Rice, Turmeric' },
+            { label: 'Raw Material Price (₹/kg)', name: 'rawMaterialPricePerKg', type: 'number', placeholder: '0.00' },
+            { label: 'Grinding Charge (₹/kg)', name: 'grindingChargePerKg', type: 'number', placeholder: '0.00' },
+          ].map(field => (
+            <div key={field.name}>
+              <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1 mb-1 block">{field.label}</label>
+              <input
+                type={field.type} name={field.name} value={formData[field.name]}
+                onChange={e => setFormData(p => ({ ...p, [e.target.name]: e.target.value }))}
+                placeholder={field.placeholder} min={field.type === 'number' ? '0' : undefined} step={field.type === 'number' ? '0.01' : undefined}
+                className={`w-full bg-surface-container-low border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none text-on-surface ${formErrors[field.name] ? 'ring-2 ring-error' : ''}`}
+                style={{ fontSize: '16px' }}
+              />
+              {formErrors[field.name] && <p className="text-xs text-error mt-1 ml-1">{formErrors[field.name]}</p>}
+            </div>
+          ))}
+          <div>
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1 mb-1 block">Description (optional)</label>
+            <textarea name="description" value={formData.description}
+              onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+              placeholder="Brief product description" rows="3"
+              className="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none text-on-surface resize-none"
+              style={{ fontSize: '16px' }}
             />
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button onClick={handleSubmit} disabled={submitting}
+              className="flex-1 sage-gradient text-on-primary font-headline font-bold py-3 rounded-full shadow-sage hover:shadow-sage-lg active:scale-95 transition-all disabled:opacity-50">
+              {submitting ? 'Saving...' : editingProduct ? 'Update Product' : 'Add Product'}
+            </button>
+            <button onClick={() => setIsModalOpen(false)}
+              className="flex-1 bg-surface-container-low text-on-surface font-headline font-bold py-3 rounded-full hover:bg-surface-container-high transition-colors">
+              Cancel
+            </button>
           </div>
         </div>
       </Modal>
-      </div>
     </div>
   );
 };
