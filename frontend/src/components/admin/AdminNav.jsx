@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -6,159 +5,101 @@ const AdminNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  // Only show on admin pages
   if (!location.pathname.startsWith('/admin') || location.pathname === '/admin/login') {
     return null;
   }
 
-  // Professional SVG icons for navigation
-  const getIcon = (iconName) => {
-    const icons = {
-      dashboard: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2H5a2 2 0 00-2-2z" />
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5v4M16 5v4" />
-        </svg>
-      ),
-      orders: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
-        </svg>
-      ),
-      products: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-        </svg>
-      ),
-      staff: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-        </svg>
-      ),
-      reports: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
-      logout: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-        </svg>
-      )
-    };
-    return icons[iconName];
-  };
-
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-    { name: 'Orders', path: '/admin/orders', icon: 'orders' },
-    { name: 'Products', path: '/admin/products', icon: 'products' },
-    { name: 'Staff', path: '/admin/staff', icon: 'staff' },
-    { name: 'Reports', path: '/admin/reports', icon: 'reports' }
+    { name: 'Orders', path: '/admin/orders', icon: 'shopping_bag' },
+    { name: 'Products', path: '/admin/products', icon: 'inventory_2' },
+    { name: 'Staff', path: '/admin/staff', icon: 'group' },
+    { name: 'Reports', path: '/admin/reports', icon: 'analytics' },
   ];
 
   const isActive = (path) => location.pathname === path;
 
-  const handleLogout = () => {
-    logout();
-    navigate('/admin/login');
-  };
-
   return (
     <>
-      {/* Desktop Navigation */}
-      <nav className="hidden md:block bg-white border-b border-gray-200 shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-8">
-              <h1 className="text-xl font-bold text-amber-600">Admin Panel</h1>
-              <div className="flex space-x-4">
-                {navItems.map((item) => (
-                  <button
-                    key={item.path}
-                    onClick={() => navigate(item.path)}
-                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors flex items-center ${
-                      isActive(item.path)
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'text-gray-700 hover:bg-gray-100'
-                    }`}
-                  >
-                    <span className="mr-2">{getIcon(item.icon)}</span>
-                    {item.name}
-                  </button>
-                ))}
-              </div>
+      {/* Desktop Sidebar */}
+      <aside className="hidden md:flex fixed left-0 top-0 h-full flex-col p-6 gap-2 bg-surface-container-low w-64 z-50">
+        {/* Logo */}
+        <div className="mb-8 px-4">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl sage-gradient flex items-center justify-center text-on-primary">
+              <span className="material-symbols-outlined">restaurant_menu</span>
             </div>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors flex items-center"
-            >
-              <span className="mr-2">{getIcon('logout')}</span>
-              Logout
-            </button>
-          </div>
-        </div>
-      </nav>
-
-      {/* Mobile Navigation */}
-      <nav className="md:hidden bg-white border-b border-gray-200 shadow-sm">
-        <div className="px-4">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-lg font-bold text-amber-600">Admin Panel</h1>
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 rounded-md text-gray-700 hover:bg-gray-100 min-w-[44px] min-h-[44px]"
-              aria-label="Toggle menu"
-            >
-              {isMenuOpen ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                </svg>
-              )}
-            </button>
+            <div>
+              <h1 className="font-headline font-black text-on-background text-lg leading-tight">Admin Panel</h1>
+              <p className="text-xs text-on-surface-variant">Flour &amp; Spice Mill</p>
+            </div>
           </div>
         </div>
 
-        {/* Mobile Menu Dropdown */}
-        {isMenuOpen && (
-          <div className="border-t border-gray-200 bg-white">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {navItems.map((item) => (
-                <button
-                  key={item.path}
-                  onClick={() => {
-                    navigate(item.path);
-                    setIsMenuOpen(false);
-                  }}
-                  className={`w-full text-left px-3 py-3 rounded-md text-base font-medium transition-colors min-h-[44px] flex items-center ${
-                    isActive(item.path)
-                      ? 'bg-amber-100 text-amber-700'
-                      : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  <span className="mr-3">{getIcon(item.icon)}</span>
-                  {item.name}
-                </button>
-              ))}
-              <button
-                onClick={() => {
-                  handleLogout();
-                  setIsMenuOpen(false);
-                }}
-                className="w-full text-left px-3 py-3 rounded-md text-base font-medium text-red-600 hover:bg-red-50 transition-colors min-h-[44px] flex items-center"
-              >
-                <span className="mr-3">{getIcon('logout')}</span>
-                Logout
-              </button>
-            </div>
+        {/* Nav Items */}
+        <nav className="flex-1 flex flex-col gap-1">
+          {navItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`flex items-center gap-3 px-4 py-3 rounded-full text-sm font-medium transition-all ${
+                isActive(item.path)
+                  ? 'bg-surface-container-lowest text-on-background font-bold shadow-sm'
+                  : 'text-on-background/70 hover:translate-x-1 hover:bg-primary-container/30'
+              }`}
+            >
+              <span className="material-symbols-outlined text-xl"
+                style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                {item.icon}
+              </span>
+              <span>{item.name}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Logout */}
+        <div className="mt-auto">
+          <button
+            onClick={() => { logout(); navigate('/admin/login'); }}
+            className="w-full sage-gradient text-on-primary py-3 rounded-full font-headline font-semibold flex items-center justify-center gap-2 hover:opacity-90 transition-opacity"
+          >
+            <span className="material-symbols-outlined text-sm">logout</span>
+            Logout
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile Top Bar */}
+      <nav className="md:hidden fixed top-0 left-0 right-0 z-50 bg-background/90 backdrop-blur-xl border-b border-outline-variant/20 px-4 h-16 flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg sage-gradient flex items-center justify-center text-on-primary">
+            <span className="material-symbols-outlined text-sm">restaurant_menu</span>
           </div>
-        )}
+          <span className="font-headline font-black text-on-background">Admin Panel</span>
+        </div>
+        <div className="flex items-center gap-1">
+          {navItems.map((item) => (
+            <button
+              key={item.path}
+              onClick={() => navigate(item.path)}
+              className={`p-2 rounded-full transition-all ${isActive(item.path) ? 'bg-primary-container text-primary' : 'text-on-surface-variant'}`}
+              title={item.name}
+            >
+              <span className="material-symbols-outlined text-xl"
+                style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1" } : {}}>
+                {item.icon}
+              </span>
+            </button>
+          ))}
+          <button
+            onClick={() => { logout(); navigate('/admin/login'); }}
+            className="p-2 rounded-full text-error"
+            title="Logout"
+          >
+            <span className="material-symbols-outlined text-xl">logout</span>
+          </button>
+        </div>
       </nav>
     </>
   );

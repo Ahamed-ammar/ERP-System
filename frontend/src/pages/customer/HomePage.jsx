@@ -45,7 +45,7 @@ const HomePage = () => {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="space-y-8">
               <h1 className="font-headline text-5xl lg:text-7xl font-extrabold tracking-tighter text-on-background leading-[1.1]">
-                Fresh Ground <span className="text-primary italic">Flour & Spices</span> at Your Door.
+                Fresh Ground <span className="text-primary italic">Flour & Spices</span> at Your Door.   
               </h1>
               <p className="text-on-surface-variant text-lg font-body leading-relaxed max-w-md">
                 Experience the authentic taste of traditionally ground flour and spices. From farm to your kitchen, we preserve the natural goodness.

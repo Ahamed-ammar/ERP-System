@@ -1,137 +1,254 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { getDashboardMetrics } from '../../api/adminApi';
 import { toast } from 'react-toastify';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const DashboardPage = () => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [dashboardData, setDashboardData] = useState(null);
+  const [data, setData] = useState(null);
 
   useEffect(() => {
-    fetchDashboardData();
+    getDashboardMetrics()
+      .then(res => setData(res.data))
+      .catch(() => toast.error('Failed to load dashboard data'))
+      .finally(() => setLoading(false));
   }, []);
-
-  const fetchDashboardData = async () => {
-    try {
-      setLoading(true);
-      const response = await getDashboardMetrics();
-      setDashboardData(response.data);
-    } catch (error) {
-      console.error('Error fetching dashboard data:', error);
-      toast.error('Failed to load dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      <div className="md:ml-64 min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
       </div>
     );
   }
 
-  if (!dashboardData) {
+  if (!data) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">No data available</p>
+      <div className="md:ml-64 min-h-screen bg-background flex items-center justify-center">
+        <p className="text-on-surface-variant">No data available</p>
       </div>
     );
   }
 
-  const { ordersToday, revenueToday, pendingOrders, orderCountsLast7Days, revenueLast7Days } = dashboardData;
+  const { ordersToday, revenueToday, pendingOrders, orderCountsLast7Days, revenueLast7Days, mostOrderedProducts, pickupVsDelivery } = data;
+
+  // Bar chart max value for scaling
+  const maxRevenue = Math.max(...(revenueLast7Days?.map(d => d.revenue) || [1]));
+  const maxOrders = Math.max(...(orderCountsLast7Days?.map(d => d.count) || [1]));
+
+  const metrics = [
+    {
+      label: 'Orders Today',
+      value: ordersToday,
+      icon: 'receipt_long',
+      iconBg: 'bg-primary-container',
+      iconColor: 'text-primary',
+      badge: '+Today',
+      badgeColor: 'text-primary bg-primary/10',
+    },
+    {
+      label: 'Total Revenue Today',
+      value: `₹${revenueToday?.toFixed(0) || 0}`,
+      icon: 'payments',
+      iconBg: 'bg-secondary-container',
+      iconColor: 'text-secondary',
+      badge: 'Today',
+      badgeColor: 'text-primary bg-primary/10',
+    },
+    {
+      label: 'Pending Orders',
+      value: pendingOrders,
+      icon: 'pending_actions',
+      iconBg: 'bg-tertiary-container',
+      iconColor: 'text-tertiary',
+      badge: 'Active',
+      badgeColor: 'text-primary bg-primary/10',
+    },
+    {
+      label: 'Avg Order Value',
+      value: ordersToday > 0 ? `₹${(revenueToday / ordersToday).toFixed(0)}` : '₹0',
+      icon: 'shopping_cart',
+      iconBg: 'bg-surface-container-high',
+      iconColor: 'text-on-surface',
+      badge: 'Avg',
+      badgeColor: 'text-primary bg-primary/10',
+    },
+  ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-          <p className="mt-1 text-sm text-gray-600">View business metrics and analytics</p>
-        </div>
+    <div className="md:ml-64 min-h-screen bg-background pt-16 md:pt-0">
+      <main className="p-6 md:p-8">
+
+        {/* Header */}
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-4">
+          <div>
+            <h2 className="font-headline text-3xl font-extrabold text-on-background tracking-tight">
+              Comprehensive Analytics
+            </h2>
+            <p className="text-on-surface-variant font-medium mt-1">Real-time performance metrics for your mill.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate('/admin/reports')}
+              className="flex items-center gap-2 bg-secondary-container text-on-secondary-container px-6 py-2.5 rounded-full font-headline font-bold hover:opacity-90 transition-all"
+            >
+              <span className="material-symbols-outlined text-xl">download</span>
+              Export CSV
+            </button>
+          </div>
+        </header>
 
         {/* Metric Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-8">
-          {/* Orders Today Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Orders Today</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{ordersToday}</p>
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          {metrics.map((m) => (
+            <div key={m.label} className="bg-surface-container-lowest p-6 rounded-xl shadow-card border-none">
+              <div className="flex items-center justify-between mb-4">
+                <div className={`w-10 h-10 ${m.iconBg} rounded-xl flex items-center justify-center ${m.iconColor}`}>
+                  <span className="material-symbols-outlined">{m.icon}</span>
+                </div>
+                <span className={`text-xs font-bold px-2 py-1 rounded-full ${m.badgeColor}`}>{m.badge}</span>
               </div>
-              <div className="bg-blue-100 rounded-full p-3">
-                <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
-                </svg>
-              </div>
+              <p className="text-sm font-medium text-on-surface-variant mb-1">{m.label}</p>
+              <h3 className="font-headline text-2xl font-bold text-on-surface">{m.value}</h3>
+            </div>
+          ))}
+        </section>
+
+        {/* Charts */}
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-10">
+          {/* Revenue Trend */}
+          <div className="lg:col-span-2 bg-surface-container-lowest p-8 rounded-xl shadow-card">
+            <div className="flex justify-between items-center mb-8">
+              <h4 className="font-headline text-xl font-bold text-on-surface">Revenue Trend</h4>
+              <span className="text-xs font-bold text-on-surface-variant uppercase tracking-widest">Last 7 Days</span>
+            </div>
+            <div className="h-48 flex items-end gap-2 px-2">
+              {(revenueLast7Days || []).map((d, i) => {
+                const height = maxRevenue > 0 ? Math.max(8, (d.revenue / maxRevenue) * 100) : 8;
+                return (
+                  <div key={i} className="flex-1 flex flex-col items-center gap-2 group">
+                    <div className="w-full relative flex flex-col items-center justify-end" style={{ height: '160px' }}>
+                      <div
+                        className="w-full bg-primary/20 rounded-t-xl relative transition-all duration-500 group-hover:bg-primary/30"
+                        style={{ height: `${height}%` }}
+                      >
+                        <div className="absolute -top-0.5 w-full h-1 bg-primary rounded-full" />
+                        <div className="absolute -top-8 left-1/2 -translate-x-1/2 bg-on-background text-on-primary px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+                          ₹{d.revenue?.toFixed(0)}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                      {new Date(d.date).toLocaleDateString('en-IN', { weekday: 'short' })}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
-          {/* Revenue Today Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Revenue Today</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">₹{revenueToday.toFixed(2)}</p>
-              </div>
-              <div className="bg-green-100 rounded-full p-3">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+          {/* Order Distribution */}
+          <div className="bg-surface-container-lowest p-8 rounded-xl shadow-card">
+            <h4 className="font-headline text-xl font-bold text-on-surface mb-8">Order Distribution</h4>
+            <div className="space-y-5">
+              {(mostOrderedProducts || []).slice(0, 4).map((p, i) => {
+                const maxQty = mostOrderedProducts[0]?.totalQuantity || 1;
+                const pct = Math.round((p.totalQuantity / maxQty) * 100);
+                const colors = ['bg-primary', 'bg-secondary', 'bg-tertiary', 'bg-primary-dim'];
+                return (
+                  <div key={i} className="space-y-2">
+                    <div className="flex justify-between text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                      <span>{p.productName}</span>
+                      <span>{pct}%</span>
+                    </div>
+                    <div className="w-full bg-surface-container-high h-2 rounded-full overflow-hidden">
+                      <div className={`${colors[i]} h-full rounded-full transition-all duration-700`} style={{ width: `${pct}%` }} />
+                    </div>
+                  </div>
+                );
+              })}
+              {(!mostOrderedProducts || mostOrderedProducts.length === 0) && (
+                <p className="text-on-surface-variant text-sm">No data yet</p>
+              )}
             </div>
           </div>
+        </section>
 
-          {/* Pending Orders Card */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Pending Orders</p>
-                <p className="text-3xl font-bold text-gray-900 mt-2">{pendingOrders}</p>
+        {/* Orders Table */}
+        <section className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+          {/* Top Products */}
+          <div className="lg:col-span-1 flex flex-col gap-4">
+            <h4 className="font-headline text-xl font-bold text-on-surface">Top Performing</h4>
+            {(mostOrderedProducts || []).slice(0, 3).map((p, i) => (
+              <div key={i} className="flex items-center gap-4 bg-surface-container-low p-4 rounded-xl">
+                <div className="w-14 h-14 rounded-xl bg-primary-container flex items-center justify-center flex-shrink-0">
+                  <span className="material-symbols-outlined text-primary text-2xl">grain</span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-on-surface text-sm truncate">{p.productName}</p>
+                  <p className="text-xs text-primary font-bold">{p.totalQuantity} kg ordered</p>
+                </div>
               </div>
-              <div className="bg-amber-100 rounded-full p-3">
-                <svg className="w-8 h-8 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-              </div>
+            ))}
+            {(!mostOrderedProducts || mostOrderedProducts.length === 0) && (
+              <p className="text-on-surface-variant text-sm">No data yet</p>
+            )}
+          </div>
+
+          {/* Orders last 7 days table */}
+          <div className="lg:col-span-3 bg-surface-container-lowest rounded-xl shadow-card overflow-hidden">
+            <div className="p-6 border-b border-surface-container-high flex justify-between items-center">
+              <h4 className="font-headline font-extrabold text-lg text-on-surface">Daily Orders</h4>
+              <button
+                onClick={() => navigate('/admin/orders')}
+                className="text-xs font-bold text-primary flex items-center gap-1 hover:underline"
+              >
+                View All <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-surface-container-low/50 text-on-surface-variant text-xs font-bold uppercase tracking-widest">
+                    <th className="px-6 py-4">Date</th>
+                    <th className="px-6 py-4">Orders</th>
+                    <th className="px-6 py-4">Revenue</th>
+                    <th className="px-6 py-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-surface-container-high">
+                  {(orderCountsLast7Days || []).slice().reverse().map((d, i) => {
+                    const rev = revenueLast7Days?.find(r => r.date === d.date);
+                    const isPeak = d.count === Math.max(...(orderCountsLast7Days?.map(x => x.count) || [0]));
+                    return (
+                      <tr key={i} className="hover:bg-surface-container-low/30 transition-colors">
+                        <td className="px-6 py-4 font-bold text-on-surface text-sm">
+                          {new Date(d.date).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                        </td>
+                        <td className="px-6 py-4 text-on-surface-variant">{d.count}</td>
+                        <td className="px-6 py-4 text-on-surface">₹{rev?.revenue?.toFixed(0) || 0}</td>
+                        <td className="px-6 py-4">
+                          <span className={`px-3 py-1 text-[10px] font-black rounded-full uppercase ${
+                            isPeak ? 'bg-primary/10 text-primary' : 'bg-surface-container-high text-on-surface-variant'
+                          }`}>
+                            {isPeak ? 'Peak Day' : 'Normal'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {(!orderCountsLast7Days || orderCountsLast7Days.length === 0) && (
+                    <tr>
+                      <td colSpan="4" className="px-6 py-8 text-center text-on-surface-variant">No data available</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </div>
-        </div>
-
-        {/* Charts Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Orders Chart */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Orders - Last 7 Days</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={orderCountsLast7Days}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="count" stroke="#3b82f6" strokeWidth={2} name="Orders" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-
-          {/* Revenue Chart */}
-          <div className="bg-white rounded-lg shadow p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Revenue - Last 7 Days</h2>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={revenueLast7Days}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="date" />
-                <YAxis />
-                <Tooltip formatter={(value) => `₹${value.toFixed(2)}`} />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#10b981" strokeWidth={2} name="Revenue (₹)" />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      </div>
+        </section>
+      </main>
     </div>
   );
 };
