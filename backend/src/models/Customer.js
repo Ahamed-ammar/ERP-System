@@ -73,10 +73,8 @@ const customerSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for faster lookups
-customerSchema.index({ username: 1 });
-customerSchema.index({ email: 1 });
-customerSchema.index({ phone: 1 });
+// NOTE: unique:true on username, email, phone already creates indexes.
+// No duplicate index() calls needed here.
 
 const Customer = mongoose.model('Customer', customerSchema);
 

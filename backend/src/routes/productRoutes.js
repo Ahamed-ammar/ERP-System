@@ -11,6 +11,15 @@ import {
 const router = express.Router();
 
 /**
+ * Admin routes (authentication + admin role required)
+ * IMPORTANT: Must be declared BEFORE /:id to avoid Express matching
+ * "admin" as a product ID and returning a validation error.
+ */
+
+// GET /api/products/admin/all - Get all products including inactive (admin only)
+router.get('/admin/all', authenticate, requireAdmin, productController.getAllProducts);
+
+/**
  * Public routes (no authentication required)
  */
 
@@ -19,13 +28,6 @@ router.get('/', productController.getActiveProducts);
 
 // GET /api/products/:id - Get single product by ID
 router.get('/:id', validateProductId, productController.getProductById);
-
-/**
- * Admin routes (authentication + admin role required)
- */
-
-// GET /api/products/all - Get all products including inactive (admin only)
-router.get('/admin/all', authenticate, requireAdmin, productController.getAllProducts);
 
 // POST /api/products - Create new product (admin only)
 router.post(

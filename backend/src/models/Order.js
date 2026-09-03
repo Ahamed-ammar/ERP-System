@@ -146,6 +146,9 @@ const orderSchema = new mongoose.Schema(
 orderSchema.index({ customerId: 1 });
 orderSchema.index({ status: 1 });
 orderSchema.index({ createdAt: -1 });
+// Compound indexes for common query patterns
+orderSchema.index({ customerId: 1, createdAt: -1 }); // Customer order history sorted by date
+orderSchema.index({ createdAt: -1, status: 1 });     // Analytics: date-range + status filter
 
 const Order = mongoose.model('Order', orderSchema);
 

@@ -1,4 +1,5 @@
 import { ERROR_CODES, HTTP_STATUS } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Map error codes to HTTP status codes
@@ -55,21 +56,14 @@ export class AppError extends Error {
  */
 export const errorHandler = (err, req, res, next) => {
   // Log error for debugging (but don't expose to client)
-  if (process.env.NODE_ENV === 'development') {
-    console.error('Error:', {
-      message: err.message,
-      code: err.code,
-      stack: err.stack
-    });
-  } else {
-    // In production, log only essential info
-    console.error('Error:', {
-      message: err.message,
-      code: err.code,
-      path: req.path,
-      method: req.method
-    });
-  }
+  logger.error('Unhandled error', {
+    requestId: req.requestId,
+    method: req.method,
+    path: req.path,
+    errorCode: err.code,
+    message: err.message,
+    ...(process.env.NODE_ENV === 'development' && { stack: err.stack }),
+  });
 
   // Handle Mongoose validation errors
   if (err.name === 'ValidationError') {

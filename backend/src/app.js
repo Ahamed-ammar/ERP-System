@@ -3,6 +3,7 @@ import cors from 'cors';
 import compression from 'compression';
 import helmet from 'helmet';
 import path from 'path';
+import mongoose from 'mongoose';
 import authRoutes from './routes/authRoutes.js';
 import productRoutes from './routes/productRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
@@ -11,6 +12,8 @@ import deliveryStaffRoutes from './routes/deliveryStaffRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
+import { requestLogger } from './middleware/requestLogger.js';
+import logger from './utils/logger.js';
 
 const app = express();
 
@@ -54,6 +57,9 @@ app.use(cors({
 // Compression middleware
 app.use(compression());
 
+// Structured request logging (attach request ID + log HTTP traffic)
+app.use(requestLogger);
+
 // Body parsing middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -69,9 +75,24 @@ app.get('/', (req, res) => {
   res.json({ status: 'OK', message: 'Flour & Spice Mill API is running', version: '1.0.0' });
 });
 
-// Health check route (no rate limiting)
+// Health check — lightweight liveness probe (no DB check)
 app.get('/health', (req, res) => {
-  res.json({ status: 'OK', message: 'Server is running' });
+  res.json({ status: 'ok' });
+});
+
+// Readiness probe — checks DB connectivity
+// Use this for deep health checks (Render startup checks, monitoring)
+app.get('/health/ready', async (req, res) => {
+  const dbState = mongoose.connection.readyState;
+  // 0 = disconnected, 1 = connected, 2 = connecting, 3 = disconnecting
+  if (dbState === 1) {
+    return res.json({ status: 'ok', db: 'connected' });
+  }
+  logger.warn('Readiness check failed — DB not connected', { dbState });
+  return res.status(503).json({
+    status: 'unavailable',
+    db: dbState === 2 ? 'connecting' : 'disconnected'
+  });
 });
 
 // API routes

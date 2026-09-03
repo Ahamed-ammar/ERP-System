@@ -12,13 +12,17 @@ export const getDashboard = async (req, res, next) => {
       revenueToday,
       pendingOrders,
       orderCountsLast7Days,
-      revenueLast7Days
+      revenueLast7Days,
+      mostOrderedProducts,
+      pickupVsDelivery
     ] = await Promise.all([
       analyticsService.countOrdersToday(),
       analyticsService.calculateRevenueToday(),
       analyticsService.countPendingOrders(),
       analyticsService.getOrderCountsLast7Days(),
-      analyticsService.getRevenueLast7Days()
+      analyticsService.getRevenueLast7Days(),
+      analyticsService.getMostOrderedProducts(),
+      analyticsService.getPickupVsDeliveryPercentage()
     ]);
 
     res.status(200).json({
@@ -28,7 +32,9 @@ export const getDashboard = async (req, res, next) => {
         revenueToday,
         pendingOrders,
         orderCountsLast7Days,
-        revenueLast7Days
+        revenueLast7Days,
+        mostOrderedProducts,
+        pickupVsDelivery
       }
     });
   } catch (error) {

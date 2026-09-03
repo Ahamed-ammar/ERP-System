@@ -36,8 +36,8 @@ const productSchema = new mongoose.Schema(
   }
 );
 
-// Indexes for faster queries
-productSchema.index({ name: 1 });
+// NOTE: unique:true on name already creates an index.
+// Keep isActive index for filtering active products.
 productSchema.index({ isActive: 1 });
 
 const Product = mongoose.model('Product', productSchema);

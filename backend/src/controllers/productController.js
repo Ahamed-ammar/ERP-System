@@ -2,6 +2,7 @@ import * as productService from '../services/productService.js';
 import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js';
 import path from 'path';
 import fs from 'fs';
+import logger from '../utils/logger.js';
 
 /**
  * Get all active products (public endpoint for customers)
@@ -129,7 +130,7 @@ export const createProduct = async (req, res) => {
       try {
         fs.unlinkSync(req.file.path);
       } catch (unlinkError) {
-        console.error('Error deleting uploaded file:', unlinkError);
+        logger.warn('Error deleting uploaded file after create failure', { error: unlinkError.message });
       }
     }
     
@@ -177,7 +178,7 @@ export const updateProduct = async (req, res) => {
             fs.unlinkSync(oldImagePath);
           }
         } catch (unlinkError) {
-          console.error('Error deleting old image file:', unlinkError);
+          logger.warn('Error deleting old image file', { error: unlinkError.message });
         }
       }
     }
@@ -197,7 +198,7 @@ export const updateProduct = async (req, res) => {
       try {
         fs.unlinkSync(req.file.path);
       } catch (unlinkError) {
-        console.error('Error deleting uploaded file:', unlinkError);
+        logger.warn('Error deleting uploaded file after update failure', { error: unlinkError.message });
       }
     }
     

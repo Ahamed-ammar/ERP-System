@@ -13,6 +13,7 @@ import {
   ORDER_STATUS,
   VALID_STATUS_TRANSITIONS
 } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Create a new order
@@ -34,12 +35,14 @@ export const createOrder = async (req, res) => {
       });
     }
 
-    // Fetch current product prices and create snapshots
-    const orderItems = [];
-    
+    // Fetch all products in a single query to avoid N+1 round-trips
+    const productIds = items.map(item => item.productId);
+    const products = await Product.find({ _id: { $in: productIds } });
+    const productMap = new Map(products.map(p => [p._id.toString(), p]));
+
+    // Validate all products exist and are active before building order items
     for (const item of items) {
-      const product = await Product.findById(item.productId);
-      
+      const product = productMap.get(item.productId.toString());
       if (!product) {
         return res.status(HTTP_STATUS.NOT_FOUND).json({
           success: false,
@@ -49,7 +52,6 @@ export const createOrder = async (req, res) => {
           }
         });
       }
-      
       if (!product.isActive) {
         return res.status(HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
           success: false,
@@ -59,27 +61,25 @@ export const createOrder = async (req, res) => {
           }
         });
       }
-      
-      // Create price snapshot
+    }
+
+    // Build order items with price snapshots
+    const orderItems = items.map(item => {
+      const product = productMap.get(item.productId.toString());
       const priceSnapshot = createPriceSnapshot(product);
-      
-      // Create order item with snapshot and per-item order type
       const orderItem = {
         productId: product._id,
         productName: product.name,
         quantity: item.quantity,
         grindType: item.grindType,
-        orderType: item.orderType, // Store per-item order type
+        orderType: item.orderType,
         rawMaterialPriceSnapshot: priceSnapshot.rawMaterialPriceSnapshot,
         grindingChargeSnapshot: priceSnapshot.grindingChargeSnapshot,
-        itemTotal: 0 // Will be calculated next
+        itemTotal: 0
       };
-      
-      // Calculate item total using per-item order type
       orderItem.itemTotal = calculateItemTotal(orderItem, item.orderType);
-      
-      orderItems.push(orderItem);
-    }
+      return orderItem;
+    });
 
     // Calculate order grand total
     const totalAmount = calculateOrderTotal(orderItems);
@@ -113,7 +113,7 @@ export const createOrder = async (req, res) => {
       message: 'Order placed successfully'
     });
   } catch (error) {
-    console.error('Error creating order:', error);
+    logger.error('Error creating order', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -143,7 +143,7 @@ export const getCustomerOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching customer orders:', error);
+    logger.error('Error fetching customer orders', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -194,7 +194,7 @@ export const getOrderById = async (req, res) => {
       data: order
     });
   } catch (error) {
-    console.error('Error fetching order:', error);
+    logger.error('Error fetching order by ID', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -261,7 +261,7 @@ export const getAllOrders = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching orders:', error);
+    logger.error('Error fetching all orders', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -314,7 +314,7 @@ export const updateOrderStatus = async (req, res) => {
       message: 'Order status updated successfully'
     });
   } catch (error) {
-    console.error('Error updating order status:', error);
+    logger.error('Error updating order status', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -378,7 +378,7 @@ export const cancelOrder = async (req, res) => {
       message: 'Order cancelled successfully'
     });
   } catch (error) {
-    console.error('Error cancelling order:', error);
+    logger.error('Error cancelling order', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -461,7 +461,7 @@ export const assignDeliveryStaff = async (req, res) => {
       message: 'Delivery staff assigned successfully'
     });
   } catch (error) {
-    console.error('Error assigning delivery staff:', error);
+    logger.error('Error assigning delivery staff', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {

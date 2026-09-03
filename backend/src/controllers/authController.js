@@ -1,5 +1,6 @@
 import { customerRegister, customerLogin, customerLoginOrRegister, adminLogin } from '../services/authService.js';
 import { ERROR_CODES, HTTP_STATUS } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Customer registration controller
@@ -20,7 +21,7 @@ export const customerRegisterController = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Customer registration error:', error);
+    logger.error('Customer registration error', { error: error.message, requestId: req.requestId });
     
     if (error.code === ERROR_CODES.DUPLICATE_ENTRY) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
@@ -61,7 +62,7 @@ export const customerLoginController = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Customer login error:', error);
+    logger.error('Customer login error', { error: error.message, requestId: req.requestId });
     
     if (error.code === ERROR_CODES.INVALID_CREDENTIALS) {
       return res.status(HTTP_STATUS.UNAUTHORIZED).json({
@@ -104,7 +105,7 @@ export const customerAuth = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Customer auth error:', error);
+    logger.error('Customer phone auth error', { error: error.message, requestId: req.requestId });
     
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
@@ -135,7 +136,7 @@ export const adminAuth = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Admin auth error:', error);
+    logger.error('Admin auth error', { error: error.message, requestId: req.requestId });
     
     // Handle invalid credentials specifically
     if (error.code === ERROR_CODES.INVALID_CREDENTIALS) {
@@ -173,7 +174,7 @@ export const verifyAuth = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Token verification error:', error);
+    logger.error('Token verification error', { error: error.message, requestId: req.requestId });
     
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,

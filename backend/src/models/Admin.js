@@ -28,8 +28,7 @@ const adminSchema = new mongoose.Schema(
   }
 );
 
-// Index on username for faster lookups
-adminSchema.index({ username: 1 });
+// NOTE: unique:true on username already creates an index. No duplicate needed.
 
 // Hash password before saving
 adminSchema.pre('save', async function(next) {

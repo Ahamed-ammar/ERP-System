@@ -7,6 +7,7 @@ import {
   countStaffDeliveries
 } from '../services/deliveryStaffService.js';
 import { ERROR_CODES, HTTP_STATUS } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Get all delivery staff
@@ -21,7 +22,7 @@ export const getDeliveryStaff = async (req, res) => {
       data: staff
     });
   } catch (error) {
-    console.error('Error fetching delivery staff:', error);
+    logger.error('Error fetching delivery staff', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -48,7 +49,7 @@ export const addDeliveryStaff = async (req, res) => {
       message: 'Delivery staff added successfully'
     });
   } catch (error) {
-    console.error('Error creating delivery staff:', error);
+    logger.error('Error creating delivery staff', { error: error.message, requestId: req.requestId });
     
     // Handle duplicate phone number error
     if (error.code === 11000) {
@@ -98,7 +99,7 @@ export const updateStaff = async (req, res) => {
       message: 'Delivery staff updated successfully'
     });
   } catch (error) {
-    console.error('Error updating delivery staff:', error);
+    logger.error('Error updating delivery staff', { error: error.message, requestId: req.requestId });
     
     // Handle duplicate phone number error
     if (error.code === 11000) {
@@ -147,7 +148,7 @@ export const toggleStaffStatus = async (req, res) => {
       message: `Delivery staff ${staff.isActive ? 'activated' : 'deactivated'} successfully`
     });
   } catch (error) {
-    console.error('Error toggling staff status:', error);
+    logger.error('Error toggling staff status', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -189,7 +190,7 @@ export const getStaffDeliveryCount = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error fetching delivery count:', error);
+    logger.error('Error fetching delivery count', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {

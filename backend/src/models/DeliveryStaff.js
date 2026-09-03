@@ -29,8 +29,7 @@ const deliveryStaffSchema = new mongoose.Schema(
   }
 );
 
-// Index on phone for faster lookups
-deliveryStaffSchema.index({ phone: 1 });
+// NOTE: unique:true on phone already creates an index. No duplicate needed.
 
 const DeliveryStaff = mongoose.model('DeliveryStaff', deliveryStaffSchema);
 

@@ -6,12 +6,6 @@ export const getDashboardMetrics = async () => {
   return response.data;
 };
 
-// Get order analytics
-export const getOrderAnalytics = async (filters = {}) => {
-  const response = await axiosInstance.get('/admin/analytics/orders', { params: filters });
-  return response.data;
-};
-
 // Get revenue analytics
 export const getRevenueAnalytics = async (filters = {}) => {
   const response = await axiosInstance.get('/admin/analytics/revenue', { params: filters });

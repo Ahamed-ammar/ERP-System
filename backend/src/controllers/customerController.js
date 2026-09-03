@@ -1,5 +1,6 @@
 import Customer from '../models/Customer.js';
 import { ERROR_CODES, HTTP_STATUS } from '../config/constants.js';
+import logger from '../utils/logger.js';
 
 /**
  * Get customer profile
@@ -26,7 +27,7 @@ export const getCustomerProfile = async (req, res) => {
       data: customer
     });
   } catch (error) {
-    console.error('Error fetching customer profile:', error);
+    logger.error('Error fetching customer profile', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
@@ -73,7 +74,7 @@ export const updateCustomerProfile = async (req, res) => {
       message: 'Profile updated successfully'
     });
   } catch (error) {
-    console.error('Error updating customer profile:', error);
+    logger.error('Error updating customer profile', { error: error.message, requestId: req.requestId });
     return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
       error: {
