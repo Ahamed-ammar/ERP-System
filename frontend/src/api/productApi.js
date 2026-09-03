@@ -54,3 +54,17 @@ export const toggleProductStatus = async (id) => {
   return response.data;
 };
 
+// Update product stock level (admin only) — Phase 1
+export const updateProductStock = async (id, stockKg, lowStockThresholdKg) => {
+  const body = { stockKg };
+  if (lowStockThresholdKg !== undefined) body.lowStockThresholdKg = lowStockThresholdKg;
+  const response = await axiosInstance.patch(`/products/${id}/stock`, body);
+  return response.data;
+};
+
+// Get products below their low-stock threshold (admin only) — Phase 1
+export const getLowStockProducts = async () => {
+  const response = await axiosInstance.get('/products/admin/low-stock');
+  return response.data;
+};
+

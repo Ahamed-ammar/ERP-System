@@ -1,4 +1,5 @@
 import * as productService from '../services/productService.js';
+import { setProductStock, getLowStockProducts } from '../services/inventoryService.js';
 import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js';
 import path from 'path';
 import fs from 'fs';
@@ -275,6 +276,79 @@ export const toggleProductStatus = async (req, res) => {
         code: ERROR_CODES.INTERNAL_ERROR,
         message: 'Failed to toggle product status'
       }
+    });
+  }
+};
+
+/**
+ * Update product stock level (admin only) — Phase 1
+ * PATCH /api/products/:id/stock
+ * Body: { stockKg: number, lowStockThresholdKg?: number }
+ */
+export const updateProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { stockKg, lowStockThresholdKg } = req.body;
+
+    // Verify the product exists first
+    const existing = await productService.getProductById(id);
+    if (!existing) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        error: { code: ERROR_CODES.PRODUCT_NOT_FOUND, message: 'Product not found' }
+      });
+    }
+
+    const product = await setProductStock(id, stockKg, lowStockThresholdKg);
+
+    logger.info('Product stock updated', {
+      productId: id,
+      productName: product.name,
+      newStockKg: product.stockKg,
+      lowStockThresholdKg: product.lowStockThresholdKg,
+      updatedBy: req.user.userId,
+    });
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: { product },
+      message: `Stock updated to ${product.stockKg} kg for "${product.name}"`
+    });
+  } catch (error) {
+    if (error.code === ERROR_CODES.PRODUCT_NOT_FOUND) {
+      return res.status(HTTP_STATUS.NOT_FOUND).json({
+        success: false,
+        error: { code: error.code, message: error.message }
+      });
+    }
+    logger.error('Error updating product stock', { error: error.message, requestId: req.requestId });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to update stock' }
+    });
+  }
+};
+
+/**
+ * Get all active products below their low-stock threshold (admin only) — Phase 1
+ * GET /api/products/admin/low-stock
+ */
+export const getLowStockProductsController = async (req, res) => {
+  try {
+    const products = await getLowStockProducts();
+
+    return res.status(HTTP_STATUS.OK).json({
+      success: true,
+      data: {
+        products,
+        count: products.length,
+      }
+    });
+  } catch (error) {
+    logger.error('Error fetching low stock products', { error: error.message, requestId: req.requestId });
+    return res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
+      success: false,
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to fetch low stock products' }
     });
   }
 };

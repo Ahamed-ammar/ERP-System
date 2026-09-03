@@ -8,6 +8,11 @@ import {
   isValidStatusTransition
 } from '../services/orderService.js';
 import {
+  checkStockAvailability,
+  deductStock,
+  restoreStock,
+} from '../services/inventoryService.js';
+import {
   ERROR_CODES,
   HTTP_STATUS,
   ORDER_STATUS,
@@ -63,6 +68,23 @@ export const createOrder = async (req, res) => {
       }
     }
 
+    // Phase 1 — Stock availability check (buyAndService items only)
+    // Throws INSUFFICIENT_STOCK if any product lacks the required raw material
+    try {
+      checkStockAvailability(items, productMap);
+    } catch (stockErr) {
+      if (stockErr.code === ERROR_CODES.INSUFFICIENT_STOCK) {
+        return res.status(HTTP_STATUS.UNPROCESSABLE_ENTITY).json({
+          success: false,
+          error: {
+            code: ERROR_CODES.INSUFFICIENT_STOCK,
+            message: stockErr.message,
+          }
+        });
+      }
+      throw stockErr;
+    }
+
     // Build order items with price snapshots
     const orderItems = items.map(item => {
       const product = productMap.get(item.productId.toString());
@@ -98,6 +120,9 @@ export const createOrder = async (req, res) => {
     });
 
     await order.save();
+
+    // Phase 1 — Deduct raw material stock for buyAndService items
+    await deductStock(items, productMap);
 
     // Return order details
     return res.status(HTTP_STATUS.CREATED).json({
@@ -371,6 +396,9 @@ export const cancelOrder = async (req, res) => {
     // Update status to Cancelled
     order.status = ORDER_STATUS.CANCELLED;
     await order.save();
+
+    // Phase 1 — Restore raw material stock for buyAndService items
+    await restoreStock(order.items);
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,

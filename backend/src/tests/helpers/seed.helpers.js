@@ -11,6 +11,8 @@ import { ORDER_STATUS, GRIND_TYPES, ORDER_TYPES, DELIVERY_TYPES } from '../../co
 
 /**
  * Create a test product.
+ * Default stockKg is 100 so existing order tests pass the Phase 1 stock check.
+ * Pass stockKg: 0 explicitly to test out-of-stock scenarios.
  */
 export const createProduct = async (overrides = {}) => {
   const defaults = {
@@ -19,6 +21,8 @@ export const createProduct = async (overrides = {}) => {
     grindingChargePerKg: 10,
     isActive: true,
     description: 'Test product',
+    stockKg: 100,
+    lowStockThresholdKg: 10,
   };
   return Product.create({ ...defaults, ...overrides });
 };

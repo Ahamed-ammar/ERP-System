@@ -5,7 +5,8 @@ import { uploadProductImage, handleUploadError } from '../middleware/uploadMiddl
 import {
   validateProductId,
   validateCreateProduct,
-  validateUpdateProduct
+  validateUpdateProduct,
+  validateUpdateStock,
 } from '../validators/productValidator.js';
 
 const router = express.Router();
@@ -18,6 +19,9 @@ const router = express.Router();
 
 // GET /api/products/admin/all - Get all products including inactive (admin only)
 router.get('/admin/all', authenticate, requireAdmin, productController.getAllProducts);
+
+// GET /api/products/admin/low-stock - Get products below low-stock threshold (admin only) — Phase 1
+router.get('/admin/low-stock', authenticate, requireAdmin, productController.getLowStockProductsController);
 
 /**
  * Public routes (no authentication required)
@@ -59,6 +63,16 @@ router.patch(
   requireAdmin,
   validateProductId,
   productController.toggleProductStatus
+);
+
+// PATCH /api/products/:id/stock - Update product stock level (admin only) — Phase 1
+router.patch(
+  '/:id/stock',
+  authenticate,
+  requireAdmin,
+  validateProductId,
+  validateUpdateStock,
+  productController.updateProductStock
 );
 
 export default router;

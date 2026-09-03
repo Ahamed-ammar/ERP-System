@@ -1,10 +1,28 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { useState, useEffect } from 'react';
+import { getLowStockProducts } from '../../api/productApi';
 
 const AdminNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { logout } = useAuth();
+  const [lowStockCount, setLowStockCount] = useState(0);
+
+  // Poll low-stock count every 2 minutes while admin is logged in
+  useEffect(() => {
+    if (!location.pathname.startsWith('/admin') || location.pathname === '/admin/login') return;
+
+    const fetchLowStock = () => {
+      getLowStockProducts()
+        .then(res => setLowStockCount(res.data?.count ?? 0))
+        .catch(() => {}); // silent — nav badge is non-critical
+    };
+
+    fetchLowStock();
+    const interval = setInterval(fetchLowStock, 2 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [location.pathname]);
 
   if (!location.pathname.startsWith('/admin') || location.pathname === '/admin/login') {
     return null;
@@ -12,10 +30,10 @@ const AdminNav = () => {
 
   const navItems = [
     { name: 'Dashboard', path: '/admin/dashboard', icon: 'dashboard' },
-    { name: 'Orders', path: '/admin/orders', icon: 'shopping_bag' },
-    { name: 'Products', path: '/admin/products', icon: 'inventory_2' },
-    { name: 'Staff', path: '/admin/staff', icon: 'group' },
-    { name: 'Reports', path: '/admin/reports', icon: 'analytics' },
+    { name: 'Orders',    path: '/admin/orders',    icon: 'shopping_bag' },
+    { name: 'Products',  path: '/admin/products',  icon: 'inventory_2', badge: lowStockCount > 0 ? lowStockCount : null },
+    { name: 'Staff',     path: '/admin/staff',     icon: 'group' },
+    { name: 'Reports',   path: '/admin/reports',   icon: 'analytics' },
   ];
 
   const isActive = (path) => location.pathname === path;
@@ -53,7 +71,12 @@ const AdminNav = () => {
                 style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1" } : {}}>
                 {item.icon}
               </span>
-              <span>{item.name}</span>
+              <span className="flex-1 text-left">{item.name}</span>
+              {item.badge && (
+                <span className="ml-auto bg-amber-500 text-white text-[10px] font-black rounded-full w-5 h-5 flex items-center justify-center leading-none">
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )}
             </button>
           ))}
         </nav>
@@ -83,13 +106,18 @@ const AdminNav = () => {
             <button
               key={item.path}
               onClick={() => navigate(item.path)}
-              className={`p-2 rounded-full transition-all ${isActive(item.path) ? 'bg-primary-container text-primary' : 'text-on-surface-variant'}`}
+              className={`p-2 rounded-full transition-all relative ${isActive(item.path) ? 'bg-primary-container text-primary' : 'text-on-surface-variant'}`}
               title={item.name}
             >
               <span className="material-symbols-outlined text-xl"
                 style={isActive(item.path) ? { fontVariationSettings: "'FILL' 1" } : {}}>
                 {item.icon}
               </span>
+              {item.badge && (
+                <span className="absolute -top-0.5 -right-0.5 bg-amber-500 text-white text-[8px] font-black rounded-full w-4 h-4 flex items-center justify-center">
+                  {item.badge > 9 ? '9+' : item.badge}
+                </span>
+              )}
             </button>
           ))}
           <button

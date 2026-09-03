@@ -138,15 +138,48 @@ const ProductSelectionPage = () => {
                       {/* Order Type */}
                       <div className="space-y-2 mb-7">
                         {[
-                          { value: 'serviceOnly', label: 'Service Only', desc: `₹${product.grindingChargePerKg}/kg — Bring your own materials` },
-                          { value: 'buyAndService', label: 'Buy + Grinding', desc: `₹${(product.rawMaterialPricePerKg + product.grindingChargePerKg).toFixed(0)}/kg — We provide materials` },
-                        ].map(({ value, label, desc }) => (
-                          <label key={value} className={`flex items-start gap-4 p-4 rounded-xl border cursor-pointer transition-colors ${sel.orderType === value ? 'bg-primary-container/40 border-2 border-primary/20' : 'border-outline-variant/30 hover:bg-surface-container-low'}`}>
-                            <input type="radio" name={`orderType-${product._id}`} value={value} checked={sel.orderType === value}
-                              onChange={() => updateSelection(product._id, 'orderType', value)}
-                              className="mt-1 text-primary focus:ring-primary w-4 h-4" />
-                            <div>
-                              <span className={`block text-sm font-bold ${sel.orderType === value ? 'text-primary' : 'text-on-background'}`}>{label}</span>
+                          {
+                            value: 'serviceOnly',
+                            label: 'Service Only',
+                            desc: `₹${product.grindingChargePerKg}/kg — Bring your own materials`,
+                            disabled: false,
+                          },
+                          {
+                            value: 'buyAndService',
+                            label: 'Buy + Grinding',
+                            desc: `₹${(product.rawMaterialPricePerKg + product.grindingChargePerKg).toFixed(0)}/kg — We provide materials`,
+                            disabled: product.stockKg != null && product.stockKg <= 0,
+                            outOfStock: product.stockKg != null && product.stockKg <= 0,
+                          },
+                        ].map(({ value, label, desc, disabled, outOfStock }) => (
+                          <label
+                            key={value}
+                            className={`flex items-start gap-4 p-4 rounded-xl border transition-colors ${
+                              disabled
+                                ? 'opacity-50 cursor-not-allowed border-outline-variant/20 bg-surface-container'
+                                : `cursor-pointer ${sel.orderType === value ? 'bg-primary-container/40 border-2 border-primary/20' : 'border-outline-variant/30 hover:bg-surface-container-low'}`
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name={`orderType-${product._id}`}
+                              value={value}
+                              checked={sel.orderType === value}
+                              disabled={disabled}
+                              onChange={() => !disabled && updateSelection(product._id, 'orderType', value)}
+                              className="mt-1 text-primary focus:ring-primary w-4 h-4"
+                            />
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className={`block text-sm font-bold ${sel.orderType === value ? 'text-primary' : 'text-on-background'}`}>
+                                  {label}
+                                </span>
+                                {outOfStock && (
+                                  <span className="text-[9px] font-black uppercase tracking-wide bg-error-container/30 text-error px-2 py-0.5 rounded-full">
+                                    Out of Stock
+                                  </span>
+                                )}
+                              </div>
                               <span className="text-xs text-on-surface-variant">{desc}</span>
                             </div>
                           </label>

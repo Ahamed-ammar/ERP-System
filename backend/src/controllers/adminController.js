@@ -1,4 +1,5 @@
 import * as analyticsService from '../services/analyticsService.js';
+import { getLowStockProducts } from '../services/inventoryService.js';
 
 /**
  * Get admin dashboard metrics
@@ -14,7 +15,8 @@ export const getDashboard = async (req, res, next) => {
       orderCountsLast7Days,
       revenueLast7Days,
       mostOrderedProducts,
-      pickupVsDelivery
+      pickupVsDelivery,
+      lowStockProducts,
     ] = await Promise.all([
       analyticsService.countOrdersToday(),
       analyticsService.calculateRevenueToday(),
@@ -22,7 +24,8 @@ export const getDashboard = async (req, res, next) => {
       analyticsService.getOrderCountsLast7Days(),
       analyticsService.getRevenueLast7Days(),
       analyticsService.getMostOrderedProducts(),
-      analyticsService.getPickupVsDeliveryPercentage()
+      analyticsService.getPickupVsDeliveryPercentage(),
+      getLowStockProducts(),
     ]);
 
     res.status(200).json({
@@ -34,7 +37,9 @@ export const getDashboard = async (req, res, next) => {
         orderCountsLast7Days,
         revenueLast7Days,
         mostOrderedProducts,
-        pickupVsDelivery
+        pickupVsDelivery,
+        lowStockCount: lowStockProducts.length,
+        lowStockProducts,
       }
     });
   } catch (error) {

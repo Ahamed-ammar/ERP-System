@@ -29,6 +29,20 @@ const productSchema = new mongoose.Schema(
     imageUrl: {
       type: String,
       trim: true
+    },
+    // Phase 1 — Inventory Management
+    // stockKg tracks the mill's raw material stock for this product.
+    // Only relevant for buyAndService orders — serviceOnly customers bring their own material.
+    stockKg: {
+      type: Number,
+      default: 0,
+      min: [0, 'Stock cannot be negative']
+    },
+    // Admin sets this threshold; dashboard shows alert when stockKg falls below it
+    lowStockThresholdKg: {
+      type: Number,
+      default: 10,
+      min: [0, 'Low stock threshold cannot be negative']
     }
   },
   {

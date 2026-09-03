@@ -79,6 +79,12 @@ export const RATE_LIMITS = {
 // Business Days for Estimated Ready Date
 export const BUSINESS_DAYS_FOR_ORDER = 2;
 
+// Inventory
+export const INVENTORY = {
+  DEFAULT_LOW_STOCK_THRESHOLD_KG: 10,
+  DEFAULT_STOCK_KG: 0,
+};
+
 // Pagination
 export const PAGINATION = {
   DEFAULT_PAGE: 1,
@@ -114,6 +120,7 @@ export const ERROR_CODES = {
   CANNOT_CANCEL_ORDER: 'CANNOT_CANCEL_ORDER',
   EMPTY_CART: 'EMPTY_CART',
   STAFF_INACTIVE: 'STAFF_INACTIVE',
+  INSUFFICIENT_STOCK: 'INSUFFICIENT_STOCK',
   
   // Server
   INTERNAL_ERROR: 'INTERNAL_ERROR',

@@ -169,3 +169,46 @@ export const validateUpdateProduct = (req, res, next) => {
   
   next();
 };
+
+/**
+ * Validation schema for updating product stock — Phase 1
+ */
+export const updateStockSchema = Joi.object({
+  stockKg: Joi.number()
+    .min(0)
+    .required()
+    .messages({
+      'number.base': 'Stock must be a number',
+      'number.min': 'Stock cannot be negative',
+      'any.required': 'stockKg is required'
+    }),
+
+  lowStockThresholdKg: Joi.number()
+    .min(0)
+    .optional()
+    .messages({
+      'number.base': 'Low stock threshold must be a number',
+      'number.min': 'Low stock threshold cannot be negative'
+    })
+});
+
+/**
+ * Middleware to validate stock update request
+ */
+export const validateUpdateStock = (req, res, next) => {
+  const { error } = updateStockSchema.validate(req.body, { abortEarly: false });
+
+  if (error) {
+    const errors = error.details.map(d => d.message);
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Validation failed',
+        details: errors
+      }
+    });
+  }
+
+  next();
+};

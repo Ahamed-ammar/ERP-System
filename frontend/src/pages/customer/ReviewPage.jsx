@@ -54,7 +54,14 @@ const ReviewPage = () => {
       toast.success('Order placed successfully!');
       navigate('/order/success', { state: { order: response.data } });
     } catch (err) {
-      toast.error(err.response?.data?.error?.message || 'Failed to place order. Please try again.');
+      const errCode = err.response?.data?.error?.code;
+      const errMsg  = err.response?.data?.error?.message;
+
+      if (errCode === 'INSUFFICIENT_STOCK') {
+        toast.error(`Out of stock — ${errMsg}`, { autoClose: 6000 });
+      } else {
+        toast.error(errMsg || 'Failed to place order. Please try again.');
+      }
     } finally {
       setLoading(false);
     }

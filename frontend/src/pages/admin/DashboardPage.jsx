@@ -31,7 +31,7 @@ const DashboardPage = () => {
     );
   }
 
-  const { ordersToday, revenueToday, pendingOrders, orderCountsLast7Days, revenueLast7Days, mostOrderedProducts, pickupVsDelivery } = data;
+  const { ordersToday, revenueToday, pendingOrders, orderCountsLast7Days, revenueLast7Days, mostOrderedProducts, pickupVsDelivery, lowStockCount, lowStockProducts } = data;
 
   // Bar chart max value for scaling
   const maxRevenue = Math.max(...(revenueLast7Days?.map(d => d.revenue) || [1]));
@@ -74,6 +74,16 @@ const DashboardPage = () => {
       badge: 'Avg',
       badgeColor: 'text-primary bg-primary/10',
     },
+    {
+      label: 'Low Stock',
+      value: lowStockCount ?? 0,
+      icon: 'inventory',
+      iconBg: (lowStockCount ?? 0) > 0 ? 'bg-amber-100' : 'bg-surface-container-high',
+      iconColor: (lowStockCount ?? 0) > 0 ? 'text-amber-600' : 'text-on-surface-variant',
+      badge: (lowStockCount ?? 0) > 0 ? 'Alert' : 'OK',
+      badgeColor: (lowStockCount ?? 0) > 0 ? 'text-amber-700 bg-amber-100' : 'text-primary bg-primary/10',
+      onClick: () => navigate('/admin/products'),
+    },
   ];
 
   return (
@@ -100,9 +110,13 @@ const DashboardPage = () => {
         </header>
 
         {/* Metric Cards */}
-        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+        <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
           {metrics.map((m) => (
-            <div key={m.label} className="bg-surface-container-lowest p-6 rounded-xl shadow-card border-none">
+            <div
+              key={m.label}
+              onClick={m.onClick}
+              className={`bg-surface-container-lowest p-6 rounded-xl shadow-card border-none ${m.onClick ? 'cursor-pointer hover:shadow-card-hover transition-shadow' : ''}`}
+            >
               <div className="flex items-center justify-between mb-4">
                 <div className={`w-10 h-10 ${m.iconBg} rounded-xl flex items-center justify-center ${m.iconColor}`}>
                   <span className="material-symbols-outlined">{m.icon}</span>
@@ -174,6 +188,44 @@ const DashboardPage = () => {
             </div>
           </div>
         </section>
+
+        {/* Low Stock Alert Panel — Phase 1 */}
+        {lowStockProducts && lowStockProducts.length > 0 && (
+          <section className="mb-10 bg-amber-50 border border-amber-200 rounded-xl p-6">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-amber-500">warning</span>
+                <h4 className="font-headline font-bold text-amber-800">
+                  {lowStockProducts.length} Product{lowStockProducts.length > 1 ? 's' : ''} Running Low
+                </h4>
+              </div>
+              <button
+                onClick={() => navigate('/admin/products')}
+                className="text-xs font-bold text-amber-700 hover:underline flex items-center gap-1"
+              >
+                Manage Stock <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              {lowStockProducts.map((p) => (
+                <div key={p._id} className="bg-white/70 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-sm text-on-surface">{p.name}</p>
+                    <p className="text-xs text-on-surface-variant mt-0.5">
+                      Min {p.lowStockThresholdKg} kg
+                    </p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-extrabold text-amber-600 text-lg leading-none">
+                      {p.stockKg?.toFixed(1)}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant uppercase font-bold">kg left</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Orders Table */}
         <section className="grid grid-cols-1 lg:grid-cols-4 gap-8">
