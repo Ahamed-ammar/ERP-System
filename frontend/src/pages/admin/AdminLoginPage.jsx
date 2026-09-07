@@ -106,6 +106,7 @@ const AdminLoginPage = () => {
               type="text"
               id="username"
               name="username"
+              autoComplete="username"
               value={formData.username}
               onChange={handleChange}
               placeholder="Enter your username"
@@ -128,6 +129,7 @@ const AdminLoginPage = () => {
               type="password"
               id="password"
               name="password"
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter your password"

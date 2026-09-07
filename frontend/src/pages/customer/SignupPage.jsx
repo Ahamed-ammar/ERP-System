@@ -111,6 +111,7 @@ const SignupPage = () => {
               type="text"
               id="username"
               name="username"
+              autoComplete="username"
               value={formData.username}
               onChange={handleChange}
               placeholder="Enter username"
@@ -134,6 +135,7 @@ const SignupPage = () => {
               type="email"
               id="email"
               name="email"
+              autoComplete="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter email address"
@@ -175,6 +177,7 @@ const SignupPage = () => {
               type="password"
               id="password"
               name="password"
+              autoComplete="new-password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter password (min 6 characters)"
@@ -198,6 +201,7 @@ const SignupPage = () => {
               type="password"
               id="confirmPassword"
               name="confirmPassword"
+              autoComplete="new-password"
               value={formData.confirmPassword}
               onChange={handleChange}
               placeholder="Re-enter password"

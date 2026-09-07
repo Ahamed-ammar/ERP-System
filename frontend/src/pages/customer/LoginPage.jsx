@@ -96,6 +96,7 @@ const LoginPage = () => {
               type="text"
               id="usernameOrEmail"
               name="usernameOrEmail"
+              autoComplete="username"
               value={formData.usernameOrEmail}
               onChange={handleChange}
               placeholder="Enter username or email"
@@ -120,6 +121,7 @@ const LoginPage = () => {
               type="password"
               id="password"
               name="password"
+              autoComplete="current-password"
               value={formData.password}
               onChange={handleChange}
               placeholder="Enter password"
