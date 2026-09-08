@@ -1,10 +1,14 @@
 import dotenv from 'dotenv';
 import app from './src/app.js';
 import { connectDB } from './src/config/database.js';
+import { configureCloudinary } from './src/config/cloudinary.js';
 import logger from './src/utils/logger.js';
 
 // Load environment variables
 dotenv.config();
+
+// Configure Cloudinary (non-fatal if credentials missing)
+configureCloudinary();
 
 const PORT = process.env.PORT || 5000;
 

@@ -138,18 +138,26 @@ const ProductDetailsPage = () => {
         <div className="max-w-6xl mx-auto px-4 py-8">
           <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Product Image */}
+              {/* Product Image — Cloudinary URL takes priority, keyword map as fallback */}
               <div className="relative h-96 lg:h-full bg-gradient-to-br from-amber-50 to-orange-50">
-                <img
-                  src={getProductImage(product)}
-                  alt={product.name}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none'; 
-                    e.target.nextSibling.style.display = 'flex';
-                  }}
-                />
-                {/* Fallback */}
+                {product.imageUrl ? (
+                  <img
+                    src={product.imageUrl}
+                    alt={product.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  />
+                ) : (
+                  <img
+                    src={getProductImage(product)}
+                    alt={product.name}
+                    loading="lazy"
+                    className="w-full h-full object-cover"
+                    onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                  />
+                )}
+                {/* Fallback icon */}
                 <div className="hidden absolute inset-0 bg-gradient-to-br from-amber-200 to-orange-300 items-center justify-center">
                   <svg className="w-32 h-32 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />

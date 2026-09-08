@@ -99,13 +99,18 @@ const ProductSelectionPage = () => {
                 const img = getProductImage(product);
                 return (
                   <div key={product._id} className="group bg-surface-container-lowest rounded-xl overflow-hidden shadow-card border border-outline-variant/10 transition-all duration-300 hover:-translate-y-2 hover:shadow-card-hover">
-                    {/* Image */}
+                    {/* Image — Cloudinary URL takes priority, keyword map as fallback */}
                     <div className="relative h-64 overflow-hidden bg-surface-container-low">
-                      {img ? (
-                        <img src={img} alt={product.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      {product.imageUrl ? (
+                        <img src={product.imageUrl} alt={product.name} loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                          onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                      ) : img ? (
+                        <img src={img} alt={product.name} loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                           onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
                       ) : null}
-                      <div className={`${img ? 'hidden' : 'flex'} absolute inset-0 bg-primary-container items-center justify-center`}>
+                      <div className={`${product.imageUrl || img ? 'hidden' : 'flex'} absolute inset-0 bg-primary-container items-center justify-center`}>
                         <span className="material-symbols-outlined text-5xl text-primary">grain</span>
                       </div>
                       <div className="absolute top-4 right-4 bg-secondary-container/90 backdrop-blur text-on-secondary-container px-3 py-1.5 rounded-full text-[10px] font-extrabold uppercase tracking-widest flex items-center gap-1">

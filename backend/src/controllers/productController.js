@@ -1,8 +1,7 @@
 import * as productService from '../services/productService.js';
 import { setProductStock, getLowStockProducts } from '../services/inventoryService.js';
+import { uploadImageToCloudinary, deleteImageFromCloudinary } from '../services/cloudinaryService.js';
 import { HTTP_STATUS, ERROR_CODES } from '../config/constants.js';
-import path from 'path';
-import fs from 'fs';
 import logger from '../utils/logger.js';
 
 /**
@@ -12,47 +11,33 @@ import logger from '../utils/logger.js';
 export const getActiveProducts = async (req, res) => {
   try {
     const products = await productService.getAllProducts(true);
-    
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: {
-        products,
-        count: products.length
-      }
+      data: { products, count: products.length }
     });
   } catch (error) {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to fetch products'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to fetch products' }
     });
   }
 };
 
 /**
- * Get all products (admin endpoint - includes inactive products)
- * GET /api/products/all
+ * Get all products including inactive (admin only)
+ * GET /api/products/admin/all
  */
 export const getAllProducts = async (req, res) => {
   try {
     const products = await productService.getAllProducts(false);
-    
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: {
-        products,
-        count: products.length
-      }
+      data: { products, count: products.length }
     });
   } catch (error) {
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to fetch products'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to fetch products' }
     });
   }
 };
@@ -65,40 +50,23 @@ export const getProductById = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await productService.getProductById(id);
-    
-    res.status(HTTP_STATUS.OK).json({
-      success: true,
-      data: {
-        product
-      }
-    });
+    res.status(HTTP_STATUS.OK).json({ success: true, data: { product } });
   } catch (error) {
     if (error.code === ERROR_CODES.PRODUCT_NOT_FOUND) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
     if (error.code === ERROR_CODES.VALIDATION_ERROR) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to fetch product'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to fetch product' }
     });
   }
 };
@@ -110,47 +78,32 @@ export const getProductById = async (req, res) => {
 export const createProduct = async (req, res) => {
   try {
     const productData = req.body;
-    
-    // Add image URL if file was uploaded
+
+    // Upload image to Cloudinary if provided
     if (req.file) {
-      productData.imageUrl = `/uploads/products/${req.file.filename}`;
+      const { url } = await uploadImageToCloudinary(req.file.buffer, req.file.mimetype);
+      productData.imageUrl = url;
+      logger.info('Product image uploaded to Cloudinary', { url });
     }
-    
+
     const product = await productService.createProduct(productData);
-    
+
     res.status(HTTP_STATUS.CREATED).json({
       success: true,
-      data: {
-        product
-      },
+      data: { product },
       message: 'Product created successfully'
     });
   } catch (error) {
-    // Clean up uploaded file if product creation fails
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        logger.warn('Error deleting uploaded file after create failure', { error: unlinkError.message });
-      }
-    }
-    
     if (error.code === ERROR_CODES.VALIDATION_ERROR) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
+    logger.error('Error creating product', { error: error.message, requestId: req.requestId });
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to create product'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to create product' }
     });
   }
 };
@@ -163,72 +116,46 @@ export const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
-    
-    // Get existing product to handle image replacement
+
+    // Fetch existing product so we can delete the old Cloudinary image if needed
     const existingProduct = await productService.getProductById(id);
-    
-    // Add new image URL if file was uploaded
+
     if (req.file) {
-      updateData.imageUrl = `/uploads/products/${req.file.filename}`;
-      
-      // Delete old image file if it exists
+      // Upload new image to Cloudinary
+      const { url } = await uploadImageToCloudinary(req.file.buffer, req.file.mimetype);
+      updateData.imageUrl = url;
+      logger.info('Product image updated on Cloudinary', { url });
+
+      // Delete old Cloudinary image (non-fatal if it fails)
       if (existingProduct.imageUrl) {
-        const oldImagePath = path.join('uploads/products', path.basename(existingProduct.imageUrl));
-        try {
-          if (fs.existsSync(oldImagePath)) {
-            fs.unlinkSync(oldImagePath);
-          }
-        } catch (unlinkError) {
-          logger.warn('Error deleting old image file', { error: unlinkError.message });
-        }
+        await deleteImageFromCloudinary(existingProduct.imageUrl);
       }
     }
-    
+
     const product = await productService.updateProduct(id, updateData);
-    
+
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: {
-        product
-      },
+      data: { product },
       message: 'Product updated successfully'
     });
   } catch (error) {
-    // Clean up uploaded file if product update fails
-    if (req.file) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (unlinkError) {
-        logger.warn('Error deleting uploaded file after update failure', { error: unlinkError.message });
-      }
-    }
-    
     if (error.code === ERROR_CODES.PRODUCT_NOT_FOUND) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
     if (error.code === ERROR_CODES.VALIDATION_ERROR) {
       return res.status(HTTP_STATUS.BAD_REQUEST).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
+    logger.error('Error updating product', { error: error.message, requestId: req.requestId });
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to update product'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to update product' }
     });
   }
 };
@@ -241,41 +168,21 @@ export const toggleProductStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const product = await productService.toggleProductStatus(id);
-    
     res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: {
-        product
-      },
+      data: { product },
       message: `Product ${product.isActive ? 'activated' : 'deactivated'} successfully`
     });
   } catch (error) {
     if (error.code === ERROR_CODES.PRODUCT_NOT_FOUND) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
         success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
+        error: { code: error.code, message: error.message }
       });
     }
-    
-    if (error.code === ERROR_CODES.VALIDATION_ERROR) {
-      return res.status(HTTP_STATUS.BAD_REQUEST).json({
-        success: false,
-        error: {
-          code: error.code,
-          message: error.message
-        }
-      });
-    }
-    
     res.status(HTTP_STATUS.INTERNAL_SERVER_ERROR).json({
       success: false,
-      error: {
-        code: ERROR_CODES.INTERNAL_ERROR,
-        message: 'Failed to toggle product status'
-      }
+      error: { code: ERROR_CODES.INTERNAL_ERROR, message: 'Failed to toggle product status' }
     });
   }
 };
@@ -283,14 +190,12 @@ export const toggleProductStatus = async (req, res) => {
 /**
  * Update product stock level (admin only) — Phase 1
  * PATCH /api/products/:id/stock
- * Body: { stockKg: number, lowStockThresholdKg?: number }
  */
 export const updateProductStock = async (req, res) => {
   try {
     const { id } = req.params;
     const { stockKg, lowStockThresholdKg } = req.body;
 
-    // Verify the product exists first
     const existing = await productService.getProductById(id);
     if (!existing) {
       return res.status(HTTP_STATUS.NOT_FOUND).json({
@@ -305,7 +210,6 @@ export const updateProductStock = async (req, res) => {
       productId: id,
       productName: product.name,
       newStockKg: product.stockKg,
-      lowStockThresholdKg: product.lowStockThresholdKg,
       updatedBy: req.user.userId,
     });
 
@@ -330,19 +234,15 @@ export const updateProductStock = async (req, res) => {
 };
 
 /**
- * Get all active products below their low-stock threshold (admin only) — Phase 1
+ * Get products below low-stock threshold (admin only) — Phase 1
  * GET /api/products/admin/low-stock
  */
 export const getLowStockProductsController = async (req, res) => {
   try {
     const products = await getLowStockProducts();
-
     return res.status(HTTP_STATUS.OK).json({
       success: true,
-      data: {
-        products,
-        count: products.length,
-      }
+      data: { products, count: products.length }
     });
   } catch (error) {
     logger.error('Error fetching low stock products', { error: error.message, requestId: req.requestId });

@@ -58,6 +58,9 @@ const ProductManagementPage = () => {
   });
   const [formErrors, setFormErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
+  // Image upload state
+  const [selectedImage, setSelectedImage] = useState(null);   // File object
+  const [imagePreview, setImagePreview] = useState(null);     // local object URL for preview
 
   // Stock update modal
   const [isStockModalOpen, setIsStockModalOpen] = useState(false);
@@ -94,7 +97,26 @@ const ProductManagementPage = () => {
       description: product.description || '',
     } : { name: '', rawMaterialPricePerKg: '', grindingChargePerKg: '', description: '' });
     setFormErrors({});
+    // Reset image state
+    setSelectedImage(null);
+    setImagePreview(null);
     setIsProductModalOpen(true);
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      toast.error('Only JPEG, PNG, and WebP images are allowed');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be under 5 MB');
+      return;
+    }
+    setSelectedImage(file);
+    setImagePreview(URL.createObjectURL(file));
   };
 
   const handleProductSubmit = async () => {
@@ -113,6 +135,10 @@ const ProductManagementPage = () => {
       payload.append('rawMaterialPricePerKg', parseFloat(formData.rawMaterialPricePerKg));
       payload.append('grindingChargePerKg', parseFloat(formData.grindingChargePerKg));
       payload.append('description', formData.description.trim());
+      // Attach image only if admin selected a new one
+      if (selectedImage) {
+        payload.append('image', selectedImage);
+      }
       if (editingProduct) {
         await updateProduct(editingProduct._id, payload);
         toast.success('Product updated');
@@ -308,14 +334,17 @@ const ProductManagementPage = () => {
                         <td className="py-6 px-8">
                           <div className="flex items-center gap-4">
                             <div className={`w-16 h-16 rounded-xl overflow-hidden bg-surface-container flex-shrink-0 ${!product.isActive ? 'grayscale' : ''}`}>
-                              {img ? (
+                              {/* Priority: Cloudinary URL → keyword fallback → icon */}
+                              {product.imageUrl ? (
+                                <img src={product.imageUrl} alt={product.name} className="w-full h-full object-cover"
+                                  onError={e => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }} />
+                              ) : img ? (
                                 <img src={img} alt={product.name} className="w-full h-full object-cover"
                                   onError={e => { e.target.style.display = 'none'; }} />
-                              ) : (
-                                <div className="w-full h-full bg-primary-container flex items-center justify-center">
-                                  <span className="material-symbols-outlined text-primary text-2xl">grain</span>
-                                </div>
-                              )}
+                              ) : null}
+                              <div className={`${product.imageUrl || img ? 'hidden' : 'flex'} w-full h-full bg-primary-container items-center justify-center`}>
+                                <span className="material-symbols-outlined text-primary text-2xl">grain</span>
+                              </div>
                             </div>
                             <div>
                               <h4 className="font-bold text-on-surface text-base">{product.name}</h4>
@@ -507,6 +536,49 @@ const ProductManagementPage = () => {
               className="w-full bg-surface-container-low border-none rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 focus:outline-none text-on-surface resize-none"
               style={{ fontSize: '16px' }}
             />
+          </div>
+
+          {/* Image Upload */}
+          <div>
+            <label className="text-xs font-bold text-on-surface-variant uppercase tracking-wider ml-1 mb-2 block">
+              Product Image (optional)
+            </label>
+            <div className="flex items-center gap-4">
+              {/* Preview */}
+              <div className="w-20 h-20 rounded-xl overflow-hidden bg-surface-container-low flex-shrink-0 flex items-center justify-center">
+                {imagePreview ? (
+                  <img src={imagePreview} alt="Preview" className="w-full h-full object-cover" />
+                ) : editingProduct?.imageUrl ? (
+                  <img src={editingProduct.imageUrl} alt="Current" className="w-full h-full object-cover"
+                    onError={e => { e.target.style.display = 'none'; }} />
+                ) : (
+                  <span className="material-symbols-outlined text-on-surface-variant text-3xl">image</span>
+                )}
+              </div>
+              {/* Upload button */}
+              <div className="flex-1">
+                <label className="cursor-pointer flex items-center gap-2 bg-surface-container-low hover:bg-surface-container-high transition-colors px-4 py-3 rounded-xl text-sm font-bold text-on-surface w-full">
+                  <span className="material-symbols-outlined text-primary">upload</span>
+                  {selectedImage ? selectedImage.name : editingProduct?.imageUrl ? 'Replace image' : 'Choose image'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
+                    onChange={handleImageChange}
+                    className="hidden"
+                  />
+                </label>
+                <p className="text-[10px] text-on-surface-variant mt-1 ml-1">JPEG, PNG, WebP · Max 5 MB</p>
+                {selectedImage && (
+                  <button
+                    type="button"
+                    onClick={() => { setSelectedImage(null); setImagePreview(null); }}
+                    className="text-[10px] text-error font-bold mt-1 ml-1 hover:underline"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex gap-3 pt-2">
             <button

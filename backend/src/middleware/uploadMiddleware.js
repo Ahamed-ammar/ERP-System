@@ -1,30 +1,23 @@
+/**
+ * Upload middleware — Phase 2: Cloudinary storage
+ *
+ * Images are no longer saved to Render's ephemeral disk.
+ * Flow:
+ *   1. Multer buffers the file in memory (no disk write)
+ *   2. productController streams the buffer to Cloudinary
+ *   3. Cloudinary returns a permanent HTTPS URL stored in product.imageUrl
+ *
+ * This means product images survive every Render deploy.
+ */
+
 import multer from 'multer';
-import path from 'path';
-import fs from 'fs';
 
-// Create uploads directory if it doesn't exist
-const uploadsDir = 'uploads/products';
-if (!fs.existsSync(uploadsDir)) {
-  fs.mkdirSync(uploadsDir, { recursive: true });
-}
+// Use memory storage — no disk writes, buffer passed directly to Cloudinary
+const storage = multer.memoryStorage();
 
-// Configure multer for file storage
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, uploadsDir);
-  },
-  filename: (req, file, cb) => {
-    // Generate unique filename with timestamp
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    const extension = path.extname(file.originalname);
-    cb(null, `product-${uniqueSuffix}${extension}`);
-  }
-});
-
-// File filter to allow only images
+// Only accept images
 const fileFilter = (req, file, cb) => {
   const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
-  
   if (allowedTypes.includes(file.mimetype)) {
     cb(null, true);
   } else {
@@ -32,41 +25,30 @@ const fileFilter = (req, file, cb) => {
   }
 };
 
-// Configure multer
 const upload = multer({
-  storage: storage,
-  limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB limit
-  },
-  fileFilter: fileFilter
+  storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+  fileFilter,
 });
 
-// Middleware for single image upload
+// Middleware for single image upload — attaches req.file with buffer
 export const uploadProductImage = upload.single('image');
 
-// Error handling middleware for multer
+// Error handling for multer errors
 export const handleUploadError = (error, req, res, next) => {
   if (error instanceof multer.MulterError) {
     if (error.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).json({
         success: false,
-        error: {
-          code: 'FILE_TOO_LARGE',
-          message: 'File size too large. Maximum size is 5MB.'
-        }
+        error: { code: 'FILE_TOO_LARGE', message: 'File size too large. Maximum size is 5MB.' },
       });
     }
   }
-  
-  if (error.message.includes('Invalid file type')) {
+  if (error?.message?.includes('Invalid file type')) {
     return res.status(400).json({
       success: false,
-      error: {
-        code: 'INVALID_FILE_TYPE',
-        message: error.message
-      }
+      error: { code: 'INVALID_FILE_TYPE', message: error.message },
     });
   }
-  
   next(error);
 };
