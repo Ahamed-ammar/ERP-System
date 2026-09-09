@@ -151,21 +151,36 @@ export const createOrder = async (req, res) => {
 };
 
 /**
- * Get customer's order history
- * GET /api/customer/orders
+ * Get customer's order history — with pagination (Phase 2C)
+ * GET /api/customer/orders?page=1&limit=10
  */
 export const getCustomerOrders = async (req, res) => {
   try {
     const customerId = req.user.userId;
+    const page  = Math.max(1, parseInt(req.query.page)  || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 10));
+    const skip  = (page - 1) * limit;
 
-    const orders = await Order.find({ customerId })
-      .sort({ createdAt: -1 })
-      .populate('deliveryStaffId', 'name phone');
+    const [orders, totalOrders] = await Promise.all([
+      Order.find({ customerId })
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate('deliveryStaffId', 'name phone'),
+      Order.countDocuments({ customerId }),
+    ]);
 
     return res.status(HTTP_STATUS.OK).json({
       success: true,
       data: {
-        orders
+        orders,
+        pagination: {
+          currentPage: page,
+          totalPages: Math.ceil(totalOrders / limit),
+          totalOrders,
+          limit,
+          hasMore: page * limit < totalOrders,
+        },
       }
     });
   } catch (error) {

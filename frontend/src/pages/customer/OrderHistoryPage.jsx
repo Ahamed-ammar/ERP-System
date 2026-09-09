@@ -182,17 +182,37 @@ const OrderHistoryPage = () => {
   const { clearCart, resetCartOnTypeChange, addToCart } = useCart();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [cancellingId, setCancellingId] = useState(null);
   const [filter, setFilter] = useState('All');
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
+  const [totalOrders, setTotalOrders] = useState(0);
+  const LIMIT = 10;
 
-  useEffect(() => {
-    getCustomerOrders()
-      .then(res => setOrders(
-        (res.data.orders || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
-      ))
-      .catch(() => toast.error('Failed to load order history'))
-      .finally(() => setLoading(false));
-  }, []);
+  const fetchOrders = async (pageNum = 1, append = false) => {
+    try {
+      if (pageNum === 1) setLoading(true); else setLoadingMore(true);
+      const res = await getCustomerOrders(pageNum, LIMIT);
+      const newOrders = (res.data.orders || []).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setOrders(prev => append ? [...prev, ...newOrders] : newOrders);
+      setHasMore(res.data.pagination?.hasMore ?? false);
+      setTotalOrders(res.data.pagination?.totalOrders ?? newOrders.length);
+    } catch {
+      toast.error('Failed to load order history');
+    } finally {
+      setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+
+  useEffect(() => { fetchOrders(1, false); }, []);
+
+  const handleLoadMore = () => {
+    const nextPage = page + 1;
+    setPage(nextPage);
+    fetchOrders(nextPage, true);
+  };
 
   const handleReorder = (order) => {
     try {
@@ -225,7 +245,7 @@ const OrderHistoryPage = () => {
     }
   };
 
-  const ongoing = orders.filter(o => ['Pending', 'InProgress', 'Ready', 'OutForDelivery'].includes(o.status)).length;
+  const ongoing   = orders.filter(o => ['Pending', 'InProgress', 'Ready', 'OutForDelivery'].includes(o.status)).length;
   const completed = orders.filter(o => o.status === 'Delivered').length;
 
   const filterOptions = [
@@ -260,7 +280,7 @@ const OrderHistoryPage = () => {
             <h1 className="font-headline text-5xl font-extrabold text-on-surface tracking-tight mb-2">
               Order History
             </h1>
-            <p className="text-on-surface-variant font-medium">{orders.length} orders total</p>
+            <p className="text-on-surface-variant font-medium">{totalOrders} orders total</p>
           </header>
 
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -327,6 +347,32 @@ const OrderHistoryPage = () => {
                     isCancelling={cancellingId === order._id}
                   />
                 ))
+              )}
+
+              {/* Load More — only shown when filter is 'All' and there are more orders on the server */}
+              {filter === 'All' && hasMore && (
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={handleLoadMore}
+                    disabled={loadingMore}
+                    className="flex items-center gap-2 px-8 py-3.5 sage-gradient text-on-primary font-headline font-bold rounded-full shadow-sage hover:shadow-sage-lg active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {loadingMore ? (
+                      <>
+                        <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Loading...
+                      </>
+                    ) : (
+                      <>
+                        <span className="material-symbols-outlined text-sm">expand_more</span>
+                        Load More ({totalOrders - orders.length} remaining)
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
             </div>
           </div>
