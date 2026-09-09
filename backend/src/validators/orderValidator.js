@@ -1,5 +1,5 @@
 import Joi from 'joi';
-import { ORDER_TYPES, GRIND_TYPES, STREET_TYPES, ORDER_STATUS } from '../config/constants.js';
+import { ORDER_TYPES, GRIND_TYPES, STREET_TYPES, ORDER_STATUS, DELIVERY_TYPES } from '../config/constants.js';
 
 /**
  * Validation schema for order creation
@@ -46,46 +46,46 @@ export const createOrderSchema = Joi.object({
       'array.min': 'Order must have at least one item',
       'any.required': 'Items are required'
     }),
-  
-  deliveryAddress: Joi.object({
-    name: Joi.string()
-      .trim()
-      .required()
-      .messages({
-        'any.required': 'Name is required'
+
+  // Phase 2B: Customer can now choose Pickup or Delivery
+  // Defaults to Delivery if not provided (backward compatible)
+  deliveryType: Joi.string()
+    .valid(...Object.values(DELIVERY_TYPES))
+    .optional()
+    .default(DELIVERY_TYPES.DELIVERY)
+    .messages({
+      'any.only': 'Delivery type must be Pickup or Delivery'
+    }),
+
+  deliveryAddress: Joi.when('deliveryType', {
+    is: DELIVERY_TYPES.PICKUP,
+    // For Pickup, address is fully optional — customer comes to the mill
+    then: Joi.object({
+      name: Joi.string().trim().optional().allow(''),
+      phone: Joi.string().trim().pattern(/^[0-9]{10}$/).optional().allow('').messages({
+        'string.pattern.base': 'Phone number must be 10 digits'
       }),
-    phone: Joi.string()
-      .trim()
-      .pattern(/^[0-9]{10}$/)
-      .required()
-      .messages({
+      streetType: Joi.string().valid(...Object.values(STREET_TYPES)).optional().allow(''),
+      houseName: Joi.string().trim().optional().allow(''),
+      doorNo: Joi.string().trim().optional().allow(''),
+      landmark: Joi.string().trim().allow('').optional()
+    }).optional().default({}),
+    // For Delivery (default), full address is required
+    otherwise: Joi.object({
+      name: Joi.string().trim().required().messages({ 'any.required': 'Name is required' }),
+      phone: Joi.string().trim().pattern(/^[0-9]{10}$/).required().messages({
         'string.pattern.base': 'Phone number must be 10 digits',
         'any.required': 'Phone number is required'
       }),
-    streetType: Joi.string()
-      .valid(...Object.values(STREET_TYPES))
-      .required()
-      .messages({
+      streetType: Joi.string().valid(...Object.values(STREET_TYPES)).required().messages({
         'any.only': 'Street type must be Center, Top, or Down side',
         'any.required': 'Street type is required'
       }),
-    houseName: Joi.string()
-      .trim()
-      .required()
-      .messages({
-        'any.required': 'House name is required'
-      }),
-    doorNo: Joi.string()
-      .trim()
-      .required()
-      .messages({
-        'any.required': 'Door number is required'
-      }),
-    landmark: Joi.string()
-      .trim()
-      .allow('')
-      .optional()
-  }).required()
+      houseName: Joi.string().trim().required().messages({ 'any.required': 'House name is required' }),
+      doorNo: Joi.string().trim().required().messages({ 'any.required': 'Door number is required' }),
+      landmark: Joi.string().trim().allow('').optional()
+    }).required()
+  })
 });
 
 /**

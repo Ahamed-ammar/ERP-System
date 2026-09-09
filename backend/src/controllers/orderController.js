@@ -26,7 +26,7 @@ import logger from '../utils/logger.js';
  */
 export const createOrder = async (req, res) => {
   try {
-    const { items, deliveryAddress } = req.body;
+    const { items, deliveryAddress, deliveryType } = req.body;
     const customerId = req.user.userId;
 
     // Validate cart has items (already validated by Joi, but double-check)
@@ -109,11 +109,12 @@ export const createOrder = async (req, res) => {
     // Calculate estimated ready date
     const estimatedReadyDate = calculateEstimatedReadyDate();
 
-    // Create order without global orderType
+    // Create order
     const order = new Order({
       customerId,
       items: orderItems,
       deliveryAddress,
+      deliveryType: deliveryType || 'Delivery',
       totalAmount,
       status: ORDER_STATUS.PENDING,
       estimatedReadyDate

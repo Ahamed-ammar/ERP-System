@@ -340,11 +340,20 @@ const OrderManagementPage = () => {
             </div>
             {selectedOrder.deliveryAddress && (
               <div className="bg-surface-container-low rounded-xl p-4">
-                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">Delivery Address</p>
-                <p className="text-sm text-on-surface-variant">
-                  {selectedOrder.deliveryAddress.doorNo}, {selectedOrder.deliveryAddress.houseName}, {selectedOrder.deliveryAddress.streetType}
-                  {selectedOrder.deliveryAddress.landmark ? ` · ${selectedOrder.deliveryAddress.landmark}` : ''}
+                <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-2">
+                  {selectedOrder.deliveryType === 'Pickup' ? 'Pickup from Mill' : 'Delivery Address'}
                 </p>
+                {selectedOrder.deliveryType === 'Pickup' ? (
+                  <p className="text-sm text-on-surface-variant flex items-center gap-1.5">
+                    <span className="material-symbols-outlined text-primary text-base">storefront</span>
+                    Customer will collect at the mill
+                  </p>
+                ) : (
+                  <p className="text-sm text-on-surface-variant">
+                    {selectedOrder.deliveryAddress.doorNo}, {selectedOrder.deliveryAddress.houseName}, {selectedOrder.deliveryAddress.streetType}
+                    {selectedOrder.deliveryAddress.landmark ? ` · ${selectedOrder.deliveryAddress.landmark}` : ''}
+                  </p>
+                )}
               </div>
             )}
             <div className="flex justify-between items-center pt-2 border-t border-outline-variant/10">

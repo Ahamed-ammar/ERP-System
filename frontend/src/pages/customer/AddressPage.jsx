@@ -8,6 +8,7 @@ const AddressPage = () => {
   const navigate = useNavigate();
   const { items, totalAmount, isEmpty, removeFromCart } = useContext(CartContext);
 
+  const [deliveryType, setDeliveryType] = useState('Delivery'); // 'Delivery' or 'Pickup'
   const [formData, setFormData] = useState({
     name: '', phone: '', streetType: '', houseName: '', doorNo: '', landmark: ''
   });
@@ -43,20 +44,27 @@ const AddressPage = () => {
 
   const validate = () => {
     const e = {};
-    if (!formData.name.trim()) e.name = 'Name is required';
-    if (!formData.phone.trim()) e.phone = 'Phone is required';
-    else if (!/^\d{10}$/.test(formData.phone)) e.phone = 'Must be 10 digits';
-    if (!formData.streetType) e.streetType = 'Street type is required';
-    if (!formData.houseName.trim()) e.houseName = 'House name is required';
-    if (!formData.doorNo.trim()) e.doorNo = 'Door number is required';
+    // Address fields only required for Delivery
+    if (deliveryType === 'Delivery') {
+      if (!formData.name.trim()) e.name = 'Name is required';
+      if (!formData.phone.trim()) e.phone = 'Phone is required';
+      else if (!/^\d{10}$/.test(formData.phone)) e.phone = 'Must be 10 digits';
+      if (!formData.streetType) e.streetType = 'Street type is required';
+      if (!formData.houseName.trim()) e.houseName = 'House name is required';
+      if (!formData.doorNo.trim()) e.doorNo = 'Door number is required';
+    } else {
+      // Pickup: only phone is useful (for notifications), optional
+      if (formData.phone && !/^\d{10}$/.test(formData.phone)) e.phone = 'Must be 10 digits';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   };
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
     if (validate()) {
       localStorage.setItem('deliveryAddress', JSON.stringify(formData));
+      localStorage.setItem('deliveryType', deliveryType);
       navigate('/order/review');
     } else {
       toast.error('Please fix the errors in the form');
@@ -104,7 +112,64 @@ const AddressPage = () => {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-10">
-              {/* Delivery Address */}
+
+              {/* Delivery Type Selection */}
+              <section className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-primary">
+                    <span className="material-symbols-outlined">local_shipping</span>
+                  </div>
+                  <h2 className="font-headline text-xl font-bold">How would you like to receive your order?</h2>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {[
+                    {
+                      value: 'Delivery',
+                      icon: 'home',
+                      title: 'Home Delivery',
+                      desc: 'We bring your order to your doorstep',
+                    },
+                    {
+                      value: 'Pickup',
+                      icon: 'storefront',
+                      title: 'Pickup from Mill',
+                      desc: 'Come collect your order directly from us',
+                    },
+                  ].map(opt => (
+                    <label
+                      key={opt.value}
+                      className={`flex items-start gap-4 p-5 rounded-xl border-2 cursor-pointer transition-all ${
+                        deliveryType === opt.value
+                          ? 'border-primary bg-primary-container/20'
+                          : 'border-outline-variant/20 hover:border-primary/30 bg-surface-container-low'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="deliveryType"
+                        value={opt.value}
+                        checked={deliveryType === opt.value}
+                        onChange={() => setDeliveryType(opt.value)}
+                        className="mt-1 text-primary w-4 h-4 flex-shrink-0"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className={`material-symbols-outlined text-xl ${deliveryType === opt.value ? 'text-primary' : 'text-on-surface-variant'}`}>
+                            {opt.icon}
+                          </span>
+                          <span className={`font-headline font-bold ${deliveryType === opt.value ? 'text-primary' : 'text-on-surface'}`}>
+                            {opt.title}
+                          </span>
+                        </div>
+                        <p className="text-xs text-on-surface-variant">{opt.desc}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+              </section>
+
+              {/* Delivery Address — only shown for Home Delivery */}
+              {deliveryType === 'Delivery' && (<>
               <section className="space-y-5">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-full bg-secondary-container flex items-center justify-center text-primary">
@@ -172,6 +237,38 @@ const AddressPage = () => {
                   <p className="mt-2 ml-4 text-xs text-on-surface-variant">We'll use this for delivery updates only.</p>
                 </div>
               </section>
+              </> )} {/* end deliveryType === 'Delivery' */}
+
+              {/* Pickup info */}
+              {deliveryType === 'Pickup' && (
+                <section className="bg-primary-container/20 border border-primary/20 rounded-xl p-6 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <span className="material-symbols-outlined text-primary">storefront</span>
+                    <h2 className="font-headline text-lg font-bold text-on-surface">Pickup Details</h2>
+                  </div>
+                  <p className="text-sm text-on-surface-variant">
+                    Your order will be ready in <span className="font-bold text-on-surface">2 business days</span>.
+                    We'll update your order status — come to the mill once it shows <span className="font-bold text-on-surface">Ready</span>.
+                  </p>
+                  <div className="bg-surface-container-lowest rounded-xl p-4 text-sm space-y-1">
+                    <p className="font-bold text-on-surface">Flour &amp; Spice Mill</p>
+                    <p className="text-on-surface-variant">Mon–Sat: 8 AM – 7 PM</p>
+                    <p className="text-on-surface-variant">Kerala, India</p>
+                  </div>
+                  {/* Optional phone for pickup notifications */}
+                  <div className="pt-2">
+                    <label className="block text-xs font-bold uppercase tracking-widest text-on-surface-variant mb-2 ml-1">
+                      Phone <span className="normal-case font-normal">(optional — for order-ready notification)</span>
+                    </label>
+                    <input
+                      type="tel" inputMode="numeric" name="phone" value={formData.phone}
+                      onChange={handleChange} placeholder="10 digit phone number" maxLength="10"
+                      className={inputClass('phone')} style={{ fontSize: '16px' }}
+                    />
+                    {errors.phone && <p className="mt-1 ml-1 text-xs text-error">{errors.phone}</p>}
+                  </div>
+                </section>
+              )}
 
               {/* Mobile submit */}
               <div className="lg:hidden">

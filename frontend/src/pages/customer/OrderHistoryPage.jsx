@@ -61,6 +61,12 @@ const OrderCard = ({ order, onReorder, onCancel, isCancelling }) => {
         <span className={`px-4 py-1.5 text-xs font-bold rounded-full ${STATUS_STYLES[order.status] || 'bg-gray-100 text-gray-600'}`}>
           {STATUS_LABELS[order.status] || order.status}
         </span>
+        {order.deliveryType === 'Pickup' && (
+          <span className="flex items-center gap-1 px-3 py-1.5 text-xs font-bold rounded-full bg-primary-container text-primary">
+            <span className="material-symbols-outlined text-sm">storefront</span>
+            Pickup
+          </span>
+        )}
       </div>
 
       {/* Body */}
@@ -127,12 +133,21 @@ const OrderCard = ({ order, onReorder, onCancel, isCancelling }) => {
           ))}
           {order.deliveryAddress && (
             <div className="pt-3 border-t border-surface-container-high">
-              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">Delivery Address</p>
-              <p className="text-sm text-on-surface-variant">
-                {order.deliveryAddress.name} · {order.deliveryAddress.phone}<br />
-                {order.deliveryAddress.doorNo}, {order.deliveryAddress.houseName}, {order.deliveryAddress.streetType}
-                {order.deliveryAddress.landmark ? ` · ${order.deliveryAddress.landmark}` : ''}
+              <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+                {order.deliveryType === 'Pickup' ? 'Pickup from Mill' : 'Delivery Address'}
               </p>
+              {order.deliveryType === 'Pickup' ? (
+                <p className="text-sm text-on-surface-variant flex items-center gap-1">
+                  <span className="material-symbols-outlined text-primary text-base">storefront</span>
+                  Come collect at the mill when status shows Ready
+                </p>
+              ) : (
+                <p className="text-sm text-on-surface-variant">
+                  {order.deliveryAddress.name} · {order.deliveryAddress.phone}<br />
+                  {order.deliveryAddress.doorNo}, {order.deliveryAddress.houseName}, {order.deliveryAddress.streetType}
+                  {order.deliveryAddress.landmark ? ` · ${order.deliveryAddress.landmark}` : ''}
+                </p>
+              )}
             </div>
           )}
         </div>

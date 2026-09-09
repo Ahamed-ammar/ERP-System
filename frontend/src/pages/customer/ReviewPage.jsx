@@ -23,6 +23,9 @@ const ReviewPage = () => {
     }
   }, [navigate]);
 
+  const storedDeliveryType = localStorage.getItem('deliveryType') || 'Delivery';
+  const isPickup = storedDeliveryType === 'Pickup';
+
   useEffect(() => {
     if (isEmpty()) { toast.error('Your cart is empty'); navigate('/order/products'); }
   }, [isEmpty, navigate]);
@@ -41,16 +44,19 @@ const ReviewPage = () => {
     if (!deliveryAddress) { toast.error('Delivery address is missing'); return; }
     setLoading(true);
     try {
+      const storedDeliveryType = localStorage.getItem('deliveryType') || 'Delivery';
       const response = await createOrder({
         items: items.map(i => ({ productId: i.productId, quantity: i.quantity, grindType: i.grindType, orderType: i.orderType })),
+        deliveryType: storedDeliveryType,
         deliveryAddress: {
-          name: deliveryAddress.name, phone: deliveryAddress.phone,
-          streetType: deliveryAddress.streetType, houseName: deliveryAddress.houseName,
-          doorNo: deliveryAddress.doorNo, landmark: deliveryAddress.landmark || ''
+          name: deliveryAddress.name || '', phone: deliveryAddress.phone || '',
+          streetType: deliveryAddress.streetType || '', houseName: deliveryAddress.houseName || '',
+          doorNo: deliveryAddress.doorNo || '', landmark: deliveryAddress.landmark || ''
         }
       });
       clearCart();
       localStorage.removeItem('deliveryAddress');
+      localStorage.removeItem('deliveryType');
       toast.success('Order placed successfully!');
       navigate('/order/success', { state: { order: response.data } });
     } catch (err) {
@@ -153,7 +159,26 @@ const ReviewPage = () => {
             </div>
           </div>
 
-          {/* Delivery Address */}
+          {/* Delivery Method */}
+          <div className="bg-surface-container-lowest rounded-xl shadow-card border border-outline-variant/10 p-8 mb-5">
+            <h2 className="font-headline font-bold text-lg text-on-surface mb-4">Delivery Method</h2>
+            <div className={`flex items-center gap-3 p-4 rounded-xl ${isPickup ? 'bg-primary-container/20' : 'bg-surface-container-low'}`}>
+              <span className="material-symbols-outlined text-primary text-2xl">
+                {isPickup ? 'storefront' : 'local_shipping'}
+              </span>
+              <div>
+                <p className="font-bold text-on-surface">{isPickup ? 'Pickup from Mill' : 'Home Delivery'}</p>
+                <p className="text-xs text-on-surface-variant mt-0.5">
+                  {isPickup
+                    ? 'Come collect your order once the status shows Ready'
+                    : 'We will deliver to your address below'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Delivery Address — only shown for Home Delivery */}
+          {!isPickup && (
           <div className="bg-surface-container-lowest rounded-xl shadow-card border border-outline-variant/10 p-8 mb-8">
             <h2 className="font-headline font-bold text-lg text-on-surface mb-4">Delivery Address</h2>
             <div className="text-on-surface-variant space-y-1 text-sm">
@@ -164,6 +189,7 @@ const ReviewPage = () => {
               {deliveryAddress.landmark && <p>Landmark: {deliveryAddress.landmark}</p>}
             </div>
           </div>
+          )}
         </main>
 
         {/* Sticky Confirm Button */}
