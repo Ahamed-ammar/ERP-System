@@ -5,19 +5,18 @@ import { adminLimiter } from '../middleware/rateLimiter.js';
 
 const router = express.Router();
 
-/**
- * All admin routes require authentication and admin role
- * Rate limited to 50 requests per 15 minutes
- */
 router.use(adminLimiter);
 
-// GET /api/admin/dashboard - Get dashboard metrics
-router.get('/dashboard', authenticate, requireAdmin, adminController.getDashboard);
+// Existing routes
+router.get('/dashboard',            authenticate, requireAdmin, adminController.getDashboard);
+router.get('/analytics/revenue',    authenticate, requireAdmin, adminController.getRevenueAnalytics);
+router.get('/reports/export',       authenticate, requireAdmin, adminController.exportReport);
 
-// GET /api/admin/analytics/revenue - Get revenue analytics with date filtering
-router.get('/analytics/revenue', authenticate, requireAdmin, adminController.getRevenueAnalytics);
-
-// GET /api/admin/reports/export - Export CSV report
-router.get('/reports/export', authenticate, requireAdmin, adminController.exportReport);
+// Phase 3 — Enhanced analytics routes
+router.get('/analytics/monthly-comparison',    authenticate, requireAdmin, adminController.getMonthlyComparison);
+router.get('/analytics/grind-breakdown',       authenticate, requireAdmin, adminController.getGrindBreakdown);
+router.get('/analytics/order-type-breakdown',  authenticate, requireAdmin, adminController.getOrderTypeBreakdown);
+router.get('/analytics/staff-performance',     authenticate, requireAdmin, adminController.getStaffPerformance);
+router.get('/reports/export-enhanced',         authenticate, requireAdmin, adminController.exportEnhancedReport);
 
 export default router;

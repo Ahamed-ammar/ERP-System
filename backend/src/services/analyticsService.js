@@ -307,3 +307,233 @@ export const getRevenueByDateRange = async (startDate, endDate) => {
   
   return result;
 };
+
+/**
+ * ─────────────────────────────────────────────
+ * Phase 3 — Enhanced Analytics
+ * ─────────────────────────────────────────────
+ */
+
+/**
+ * Monthly comparison — current month vs previous month
+ * Returns orders, revenue, and % change for both months
+ */
+export const getMonthlyComparison = async () => {
+  const now = new Date();
+
+  // Current month
+  const currentStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentEnd   = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+
+  // Previous month
+  const prevStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevEnd   = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999);
+
+  const pipeline = (start, end) => [
+    {
+      $match: {
+        createdAt: { $gte: start, $lte: end },
+        status: { $ne: ORDER_STATUS.CANCELLED },
+      },
+    },
+    {
+      $group: {
+        _id: null,
+        revenue: { $sum: '$totalAmount' },
+        orders: { $sum: 1 },
+      },
+    },
+  ];
+
+  const [current, previous] = await Promise.all([
+    Order.aggregate(pipeline(currentStart, currentEnd)),
+    Order.aggregate(pipeline(prevStart,    prevEnd)),
+  ]);
+
+  const cur = current[0]  || { revenue: 0, orders: 0 };
+  const prev = previous[0] || { revenue: 0, orders: 0 };
+
+  const revenueChange = prev.revenue > 0
+    ? Math.round(((cur.revenue - prev.revenue) / prev.revenue) * 100)
+    : cur.revenue > 0 ? 100 : 0;
+
+  const ordersChange = prev.orders > 0
+    ? Math.round(((cur.orders - prev.orders) / prev.orders) * 100)
+    : cur.orders > 0 ? 100 : 0;
+
+  return {
+    current:  { revenue: cur.revenue,  orders: cur.orders  },
+    previous: { revenue: prev.revenue, orders: prev.orders },
+    revenueChange,
+    ordersChange,
+    currentMonth:  `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`,
+    previousMonth: `${now.getFullYear()}-${String(now.getMonth()).padStart(2, '0')}`,
+  };
+};
+
+/**
+ * Grind type breakdown across all non-cancelled orders
+ * Returns Fine / Medium / Coarse totals (kg + order count)
+ */
+export const getGrindTypeBreakdown = async (startDate, endDate) => {
+  const matchStage = { status: { $ne: ORDER_STATUS.CANCELLED } };
+  if (startDate && endDate) {
+    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+    const end   = new Date(endDate);   end.setHours(23, 59, 59, 999);
+    matchStage.createdAt = { $gte: start, $lte: end };
+  }
+
+  const result = await Order.aggregate([
+    { $match: matchStage },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.grindType',
+        totalKg:    { $sum: '$items.quantity' },
+        orderCount: { $sum: 1 },
+        revenue:    { $sum: '$items.itemTotal' },
+      },
+    },
+    { $sort: { totalKg: -1 } },
+  ]);
+
+  const totalKg = result.reduce((s, r) => s + r.totalKg, 0);
+  return result.map(r => ({
+    grindType:  r._id,
+    totalKg:    r.totalKg,
+    orderCount: r.orderCount,
+    revenue:    r.revenue,
+    percentage: totalKg > 0 ? Math.round((r.totalKg / totalKg) * 100) : 0,
+  }));
+};
+
+/**
+ * Order type breakdown — serviceOnly vs buyAndService
+ * Returns quantities, order counts, and revenue contribution for each type
+ */
+export const getOrderTypeBreakdown = async (startDate, endDate) => {
+  const matchStage = { status: { $ne: ORDER_STATUS.CANCELLED } };
+  if (startDate && endDate) {
+    const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+    const end   = new Date(endDate);   end.setHours(23, 59, 59, 999);
+    matchStage.createdAt = { $gte: start, $lte: end };
+  }
+
+  const result = await Order.aggregate([
+    { $match: matchStage },
+    { $unwind: '$items' },
+    {
+      $group: {
+        _id: '$items.orderType',
+        totalKg:    { $sum: '$items.quantity' },
+        orderCount: { $sum: 1 },
+        revenue:    { $sum: '$items.itemTotal' },
+      },
+    },
+  ]);
+
+  const totalRevenue = result.reduce((s, r) => s + r.revenue, 0);
+  return result.map(r => ({
+    orderType:  r._id,
+    label:      r._id === 'buyAndService' ? 'Buy & Service' : 'Service Only',
+    totalKg:    r.totalKg,
+    orderCount: r.orderCount,
+    revenue:    r.revenue,
+    revenueShare: totalRevenue > 0 ? Math.round((r.revenue / totalRevenue) * 100) : 0,
+  }));
+};
+
+/**
+ * Delivery staff performance
+ * Returns orders assigned, completed, and cancellation rate per staff member
+ */
+export const getDeliveryStaffPerformance = async () => {
+  const result = await Order.aggregate([
+    {
+      $match: {
+        deliveryStaffId: { $exists: true, $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id: '$deliveryStaffId',
+        totalAssigned: { $sum: 1 },
+        delivered:     { $sum: { $cond: [{ $eq: ['$status', ORDER_STATUS.DELIVERED] }, 1, 0] } },
+        cancelled:     { $sum: { $cond: [{ $eq: ['$status', ORDER_STATUS.CANCELLED] }, 1, 0] } },
+        totalRevenue:  {
+          $sum: {
+            $cond: [{ $eq: ['$status', ORDER_STATUS.DELIVERED] }, '$totalAmount', 0],
+          },
+        },
+      },
+    },
+    {
+      $lookup: {
+        from:         'deliverystaffs',
+        localField:   '_id',
+        foreignField: '_id',
+        as:           'staff',
+      },
+    },
+    { $unwind: { path: '$staff', preserveNullAndEmpty: true } },
+    {
+      $project: {
+        _id: 0,
+        staffId:       '$_id',
+        staffName:     { $ifNull: ['$staff.name',  'Unknown'] },
+        staffPhone:    { $ifNull: ['$staff.phone', '—'] },
+        totalAssigned: 1,
+        delivered:     1,
+        cancelled:     1,
+        totalRevenue:  1,
+        completionRate: {
+          $cond: [
+            { $gt: ['$totalAssigned', 0] },
+            { $round: [{ $multiply: [{ $divide: ['$delivered', '$totalAssigned'] }, 100] }, 0] },
+            0,
+          ],
+        },
+      },
+    },
+    { $sort: { totalAssigned: -1 } },
+  ]);
+
+  return result;
+};
+
+/**
+ * Enhanced CSV export — includes product, order type, and delivery type columns
+ */
+export const getEnhancedExportData = async (startDate, endDate) => {
+  const start = new Date(startDate); start.setHours(0, 0, 0, 0);
+  const end   = new Date(endDate);   end.setHours(23, 59, 59, 999);
+
+  const orders = await Order.find({
+    createdAt: { $gte: start, $lte: end },
+    status:    { $ne: ORDER_STATUS.CANCELLED },
+  })
+    .sort({ createdAt: 1 })
+    .select('createdAt totalAmount status deliveryType items')
+    .lean();
+
+  // Flatten to one row per order item
+  const rows = [];
+  for (const order of orders) {
+    for (const item of order.items) {
+      rows.push({
+        date:         order.createdAt.toISOString().split('T')[0],
+        orderId:      order._id.toString().slice(-8).toUpperCase(),
+        product:      item.productName,
+        quantity:     item.quantity,
+        grindType:    item.grindType,
+        orderType:    item.orderType === 'buyAndService' ? 'Buy & Service' : 'Service Only',
+        deliveryType: order.deliveryType || 'Delivery',
+        itemRevenue:  item.itemTotal,
+        orderTotal:   order.totalAmount,
+        status:       order.status,
+      });
+    }
+  }
+
+  return rows;
+};
