@@ -5,3 +5,7 @@ node_modules/
 dist/
 build/
 test/
+# Generated CSV reports
+*.csv
+# Local file uploads (now using Cloudinary in production)
+uploads/

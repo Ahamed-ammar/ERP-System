@@ -7,7 +7,7 @@ import {
   getCustomerOrders,
   cancelOrder
 } from '../controllers/orderController.js';
-import { authenticate } from '../middleware/authMiddleware.js';
+import { authenticate, requireCustomer } from '../middleware/authMiddleware.js';
 import {
   validateBody,
   updateProfileSchema
@@ -19,30 +19,35 @@ import {
 
 const router = express.Router();
 
-// Customer profile routes
+// All customer routes require a valid customer JWT (not admin)
+// authenticate verifies the token; requireCustomer ensures role === 'customer'
+
 router.get(
   '/profile',
   authenticate,
+  requireCustomer,
   getCustomerProfile
 );
 
 router.put(
   '/profile',
   authenticate,
+  requireCustomer,
   validateBody(updateProfileSchema),
   updateCustomerProfile
 );
 
-// Customer order routes
 router.get(
   '/orders',
   authenticate,
+  requireCustomer,
   getCustomerOrders
 );
 
 router.put(
   '/orders/:id/cancel',
   authenticate,
+  requireCustomer,
   validateParams(orderIdSchema),
   cancelOrder
 );
