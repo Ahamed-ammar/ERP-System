@@ -23,6 +23,7 @@ import OrderManagementPage from './pages/admin/OrderManagementPage';
 import ProductManagementPage from './pages/admin/ProductManagementPage';
 import StaffManagementPage from './pages/admin/StaffManagementPage';
 import ReportsPage from './pages/admin/ReportsPage';
+import AiPhoneOrderPage from './pages/admin/AiPhoneOrderPage';
 
 // Navigation Components
 import BottomNav from './components/common/BottomNav';
@@ -134,6 +135,14 @@ function App() {
         element={
           <AdminRoute>
             <ReportsPage />
+          </AdminRoute>
+        }
+      />
+      <Route
+        path="/admin/ai-phone-orders"
+        element={
+          <AdminRoute>
+            <AiPhoneOrderPage />
           </AdminRoute>
         }
       />

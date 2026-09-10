@@ -79,6 +79,24 @@ export const RATE_LIMITS = {
 // Business Days for Estimated Ready Date
 export const BUSINESS_DAYS_FOR_ORDER = 2;
 
+// Order Sources
+export const ORDER_SOURCES = {
+  ONLINE:    'online',
+  PHONE_AI:  'phone_ai',
+  ADMIN:     'admin',
+};
+
+// AI Order Draft statuses
+export const AI_DRAFT_STATUS = {
+  COLLECTING:              'collecting',
+  WAITING_FOR_CLARIFICATION: 'waiting_for_clarification',
+  READY_FOR_CONFIRMATION:  'ready_for_confirmation',
+  CONFIRMED:               'confirmed',
+  CREATED:                 'created',
+  CANCELLED:               'cancelled',
+  FAILED:                  'failed',
+};
+
 // Inventory
 export const INVENTORY = {
   DEFAULT_LOW_STOCK_THRESHOLD_KG: 10,

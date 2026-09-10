@@ -34,6 +34,7 @@ const AdminNav = () => {
     { name: 'Products',  path: '/admin/products',  icon: 'inventory_2', badge: lowStockCount > 0 ? lowStockCount : null },
     { name: 'Staff',     path: '/admin/staff',     icon: 'group' },
     { name: 'Reports',   path: '/admin/reports',   icon: 'analytics' },
+    { name: 'AI Orders', path: '/admin/ai-phone-orders', icon: 'support_agent' },
   ];
 
   const isActive = (path) => location.pathname === path;

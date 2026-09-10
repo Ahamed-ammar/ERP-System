@@ -9,6 +9,7 @@ import orderRoutes from './routes/orderRoutes.js';
 import customerRoutes from './routes/customerRoutes.js';
 import deliveryStaffRoutes from './routes/deliveryStaffRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
+import aiOrderRoutes from './routes/aiOrderRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { generalLimiter } from './middleware/rateLimiter.js';
 import { requestLogger } from './middleware/requestLogger.js';
@@ -98,6 +99,7 @@ app.use('/api/orders', orderRoutes);
 app.use('/api/customer', customerRoutes);
 app.use('/api/delivery-staff', deliveryStaffRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/ai', aiOrderRoutes);
 
 // 404 handler
 app.use((req, res) => {

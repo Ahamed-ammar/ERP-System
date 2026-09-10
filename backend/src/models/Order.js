@@ -135,6 +135,12 @@ const orderSchema = new mongoose.Schema(
     },
     estimatedReadyDate: {
       type: Date
+    },
+    // Phase AI — tracks how this order was created
+    source: {
+      type: String,
+      enum: ['online', 'phone_ai', 'admin'],
+      default: 'online',
     }
   },
   {
