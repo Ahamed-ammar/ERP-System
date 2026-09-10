@@ -378,13 +378,16 @@ export const confirmDraft = async (draftId, adminId) => {
   // Build delivery address
   let deliveryAddress = e.deliveryAddress || {};
   if (e.deliveryType === DELIVERY_TYPES.PICKUP) {
+    // For Pickup, build a minimal valid address using customer data from DB
+    const customerDoc = await Customer.findById(e.customerId).select('name phone').lean();
+    const custPhone = customerDoc?.phone || e.customerPhone || '0000000000';
     deliveryAddress = {
-      name:       e.customerName || '',
-      phone:      e.customerPhone || '',
-      streetType: deliveryAddress.streetType || 'Center',
-      houseName:  deliveryAddress.houseName  || 'Pickup',
-      doorNo:     deliveryAddress.doorNo     || '-',
-      landmark:   deliveryAddress.landmark   || '',
+      name:       e.customerName || customerDoc?.name || 'Pickup Customer',
+      phone:      custPhone,
+      streetType: 'Center',
+      houseName:  'Pickup at Mill',
+      doorNo:     '-',
+      landmark:   '',
     };
   }
 
