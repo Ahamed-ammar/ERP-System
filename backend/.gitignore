@@ -7,5 +7,6 @@ build/
 test/
 # Generated CSV reports
 *.csv
+.md
 # Local file uploads (now using Cloudinary in production)
 uploads/
