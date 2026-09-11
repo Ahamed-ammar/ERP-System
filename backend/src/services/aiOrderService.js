@@ -33,16 +33,39 @@ import logger from '../utils/logger.js';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Load all active product names for Gemini context */
+/** Load all active product names for AI context */
 const getProductContext = async () => {
   const products = await Product.find({ isActive: true }).select('name').lean();
-  return { productNames: products.map(p => p.name) };
+  const productNames = products.map(p => p.name);
+  if (productNames.length === 0) {
+    logger.warn('getProductContext: no active products found in DB — AI will not be able to match products');
+  } else {
+    logger.info('getProductContext: loaded products', { productNames });
+  }
+  return { productNames };
 };
 
-/** Required fields per item */
-const ITEM_REQUIRED = ['productName', 'quantityKg', 'grindType', 'orderType'];
-/** Required order-level fields */
-const ORDER_REQUIRED = ['customerName', 'deliveryType'];
+/**
+ * Convert the internal extractedOrder format → the AI schema format
+ * so the model sees consistent field names in the draft context.
+ */
+const toAIFormat = (extractedOrder) => {
+  if (!extractedOrder || Object.keys(extractedOrder).length === 0) return null;
+  return {
+    customer: {
+      name:  extractedOrder.customerName  ?? null,
+      phone: extractedOrder.customerPhone ?? null,
+    },
+    items: (extractedOrder.items || []).map(i => ({
+      productName: i.productName ?? null,
+      quantityKg:  i.quantityKg  ?? null,
+      grindType:   i.grindType   ?? null,
+      orderType:   i.orderType   ?? null,
+    })),
+    deliveryType:    extractedOrder.deliveryType    ?? null,
+    deliveryAddress: extractedOrder.deliveryAddress ?? null,
+  };
+};
 
 /**
  * Given the current extractedOrder, compute which fields are still missing.
@@ -95,6 +118,8 @@ const mergeExtraction = (existing, incoming) => {
   if (incoming.deliveryAddress) merged.deliveryAddress = incoming.deliveryAddress;
 
   // Items — merge by index, or append new items
+  // Only process incoming items if the model actually extracted at least one item.
+  // An empty array means "nothing new extracted", not "clear all items".
   if (Array.isArray(incoming.items) && incoming.items.length > 0) {
     if (!merged.items) merged.items = [];
     incoming.items.forEach((incomingItem, idx) => {
@@ -194,8 +219,8 @@ export const processTextMessage = async (draftId, userMessage, adminId) => {
 
   const context = await getProductContext();
 
-  // Call Gemini
-  const extraction = await extractFromText(userMessage, draft.extractedOrder, context);
+  // Call AI with draft converted to AI schema format (consistent field names)
+  const extraction = await extractFromText(userMessage, toAIFormat(draft.extractedOrder), context);
 
   // Merge new extraction into existing draft
   const merged = mergeExtraction(draft.extractedOrder || {}, extraction);
@@ -263,7 +288,7 @@ export const processAudioMessage = async (draftId, audioBuffer, mimeType, adminI
   draft.messages.push({ role: 'admin', content: '[Audio message uploaded]' });
 
   const context = await getProductContext();
-  const extraction = await extractFromAudio(audioBuffer, mimeType, draft.extractedOrder, context);
+  const extraction = await extractFromAudio(audioBuffer, mimeType, toAIFormat(draft.extractedOrder), context);
 
   // Reuse same merge + resolve + validation logic
   const merged = mergeExtraction(draft.extractedOrder || {}, extraction);
